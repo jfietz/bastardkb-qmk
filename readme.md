@@ -4,6 +4,18 @@ This repository contains the firmware code and releases for the Bastard Keyboard
 
 While this repository is used as primary source of truth for Bastard Keyboards firmwares, as it contains the latest changes and improvements, the maintainers aim at upstreaming all those changes to the official [QMK repository](https://github.com/qmk/qmk_firmware).
 
+## Table of Contents
+
+- [Getting Started](#getting-started)
+  - [Releases](#releases)
+    - [Keyboard](#keyboard)
+    - [Microcontroller/adapter](#microcontrolleradapter)
+    - [Keymap](#keymap)
+  - [Installing the keymap](#installing-the-keymap)
+  - [Via](#via)
+- [Going further with QMK](#going-further-with-qmk)
+  - [Building from source (advanced)](#building-from-source-advanced)
+
 # Getting Started
 
 The following section will guide you through downloading and installing the proper firmware on your Bastard Keyboard.
@@ -14,7 +26,7 @@ The latest releases of the firmware are available in the [Releases](https://gith
 
 The format of the firmware file name is:
 
-```
+```text
 bastardkb_{keyboard}_{mcu-adapter}_{keymap}
 ```
 
@@ -85,7 +97,7 @@ If you have any questions, feel free to reach out for help on the [Discord](http
 
 [Via](https://usevia.app) is an open-source cross-platform (Windows, Linux and Mac) GUI and a QMK fork for configuring your keyboard in real time.
 
-![](https://raw.githubusercontent.com/BastardKb/bastardkb-qmk/main/assets/vial.png)
+![Screenshot of the VIA application interface](https://raw.githubusercontent.com/BastardKb/bastardkb-qmk/main/assets/vial.png)
 
 It is compatible with the `via` keymaps that can be downloaded from the [Releases](https://github.com/Bastardkb/bastardkb-qmk/releases/) section.
 
@@ -147,7 +159,7 @@ The `{keyboard-arg}` depends on the keyboard you are building the firmware for (
 
 The `{keyboard-arg}` format is:
 
-```
+```text
 bastardkb/{keyboard}/{mcu-adapter}
 ```
 
