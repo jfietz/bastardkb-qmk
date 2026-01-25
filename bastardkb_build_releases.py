@@ -255,11 +255,14 @@ class Executor(object):
                     f"([bright_magenta]{worktree.name}[/bright_magenta]) Updating submodules…"
                 )
                 # TODO: use pygit2 to update submodules.
-                self._run(
+                completed_process = self._run(
                     ("git", "submodule", "update", "--init", "--recursive"),
                     log_file=self.reporter.log_file(f"git-submodule-update-{worktree.name}"),
                     cwd=worktree.path,
                 )
+                if completed_process.returncode != 0:
+                    self.reporter.error(f"Failed to update submodules for {worktree.name}")
+                    sys.exit(1)
         else:
             self.reporter.progress_status(f"([bright_magenta]{worktree.name}[/bright_magenta]) Updating submodules…")
         return worktree
