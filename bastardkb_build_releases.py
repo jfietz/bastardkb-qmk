@@ -281,8 +281,8 @@ class Executor(object):
             firmware.keymap,
             "--env",
             f"TARGET={firmware.output_filename}",
-            # "--env",
-            # f"USE_CCACHE=yes",
+            "--env",
+            "USE_CCACHE=yes",
             *reduce(iconcat, (("-e", env_var) for env_var in firmware.env_vars), []),
         )
         log_file = self.reporter.log_file(f"qmk-compile-{firmware.output_filename}")
