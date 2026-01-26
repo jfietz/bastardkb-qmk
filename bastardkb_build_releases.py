@@ -90,6 +90,14 @@ ALL_MCUS: Sequence[str] = (
     *ARM_MCUS,
 )
 
+def sanitize_filename(filename: str) -> str:
+    """Sanitize a filename to prevent directory traversal and other issues."""
+    safe_filename = re.sub(r"[^a-zA-Z0-9_-]", "_", filename)
+    if not safe_filename:
+        return "unnamed"
+    return safe_filename
+
+
 ALL_FIRMWARES: Sequence[FirmwareList] = (
     # All firmwares built on the `bkb-master` branch, ie. the branch tracking
     # `qmk/qmk_firmware:master`.
@@ -195,7 +203,7 @@ class Reporter(object):
         self._progress_status = lambda _: None
 
     def log_file(self, basename: str) -> Path:
-        return Path(self.log_dir, basename).with_suffix(".log")
+        return Path(self.log_dir, sanitize_filename(basename)).with_suffix(".log")
 
     def set_progress_status(self, progress_status: Callable[[str], None]) -> None:
         self._progress_status = progress_status
