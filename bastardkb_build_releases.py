@@ -14,8 +14,8 @@ import tempfile
 
 from collections.abc import Callable, Sequence
 from functools import partial, reduce
+from itertools import chain
 from logging.handlers import RotatingFileHandler
-from operator import iconcat
 from pathlib import Path, PurePath
 from pygit2 import (
     GitError,
@@ -283,7 +283,7 @@ class Executor(object):
             f"TARGET={firmware.output_filename}",
             # "--env",
             # f"USE_CCACHE=yes",
-            *reduce(iconcat, (("-e", env_var) for env_var in firmware.env_vars), []),
+            *chain.from_iterable(("-e", env_var) for env_var in firmware.env_vars),
         )
         log_file = self.reporter.log_file(f"qmk-compile-{firmware.output_filename}")
         return QmkCompletedProcess(self._run(argv, log_file=log_file, cwd=worktree.path), log_file)
