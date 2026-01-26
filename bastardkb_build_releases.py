@@ -449,7 +449,7 @@ def main() -> None:
     parser.add_argument(
         "-r",
         "--repository",
-        type=PurePath,
+        type=Path,
         help="The QMK repository checkout to work with.",
         default=Path.cwd(),
     )
