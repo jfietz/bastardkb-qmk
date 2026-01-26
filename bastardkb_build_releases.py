@@ -24,6 +24,7 @@ from pygit2 import (
 )
 from rich.console import Console, Group
 from rich.live import Live
+from rich.panel import Panel
 from rich.progress import (
     BarColumn,
     MofNCompleteColumn,
@@ -32,6 +33,7 @@ from rich.progress import (
     TextColumn,
     TimeElapsedColumn,
 )
+from rich.text import Text
 from typing import NamedTuple, Optional
 
 
@@ -220,6 +222,14 @@ class Reporter(object):
         self.console.print(message)
         self.logging.error(message)
 
+    def fatal(self, message: str, title: str = "Error") -> None:
+        self.console.print(
+            Panel(
+                Text(message, justify="center"), title=f"[bold red]{title}[/bold red]", border_style="red", padding=(1, 2)
+            )
+        )
+        self.logging.error(f"{title}: {message}")
+
 
 class QmkCompletedProcess(object):
     def __init__(self, completed_process: subprocess.CompletedProcess, log_file: Path):
@@ -245,7 +255,7 @@ class Executor(object):
             if worktree is None:
                 raise GitError
         except GitError:
-            self.reporter.error(f"Worktree does not exist: {branch}")
+            self.reporter.fatal(f"Worktree does not exist: {branch}", title="Git Error")
             sys.exit(1)
         if not self.dry_run:
             # TODO: checkout worktree if it does not exist.
@@ -261,7 +271,7 @@ class Executor(object):
                     cwd=worktree.path,
                 )
                 if completed_process.returncode != 0:
-                    self.reporter.error(f"Failed to update submodules for {worktree.name}")
+                    self.reporter.fatal(f"Failed to update submodules for {worktree.name}", title="Submodule Error")
                     sys.exit(1)
         else:
             self.reporter.progress_status(f"([bright_magenta]{worktree.name}[/bright_magenta]) Updating submodules…")
@@ -477,18 +487,26 @@ def main() -> None:
     try:
         repository = Repository(cmdline_args.repository)
     except GitError:
-        reporter.error("Failed to initialize QMK repository")
+        reporter.fatal(
+            f"Could not find a valid Git repository at: {cmdline_args.repository}\n\nPlease ensure the path is correct.",
+            title="Repository Error",
+        )
         sys.exit(1)
 
     if not repository.is_bare:
-        reporter.error(f"Repository must be bare: {repository}")
+        reporter.fatal(
+            f"The provided repository path is not a bare repository.\n\nPath: {repository.path}\n\nThis script requires a bare Git repository to manage worktrees for different branches.\nPlease clone the repository using the [bold]--bare[/bold] flag.",
+            title="Configuration Error",
+        )
         sys.exit(1)
 
     # Create output dir if needed.
     try:
         cmdline_args.output_dir.mkdir(parents=True, exist_ok=True)
     except FileExistsError:
-        reporter.error("Output path exists and is not a directory")
+        reporter.fatal(
+            f"The output path exists but is not a directory.\n\nPath: {cmdline_args.output_dir}", title="Output Error"
+        )
         sys.exit(1)
 
     # Create the process dispatcher.
