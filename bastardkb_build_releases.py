@@ -363,6 +363,11 @@ def build(
     progress_group = Group(empty_status, overall_status, overall_progress)
 
     total_firmware_count = reduce(total_firmware_count_reduce_callback, firmwares, 0)
+
+    if total_firmware_count == 0:
+        reporter.warn("[bold yellow]No firmwares found matching the filter criteria.[/bold yellow]")
+        return
+
     built_firmware_count = 0
     newline_task = empty_status.add_task("")
     overall_status_task = overall_status.add_task("Preparing…")
