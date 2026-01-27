@@ -439,6 +439,16 @@ def sigint_handler(reporter: Reporter, signal, frame):
     sys.exit(1)
 
 
+def check_positive(value: str) -> int:
+    try:
+        ivalue = int(value)
+    except ValueError:
+        raise argparse.ArgumentTypeError(f"{value} is not an integer")
+    if ivalue <= 0:
+        raise argparse.ArgumentTypeError(f"{value} must be a positive integer")
+    return ivalue
+
+
 def main() -> None:
     # Parse command line arguments.
     parser = argparse.ArgumentParser(description="Create Bastard Keyboard firmware release.")
@@ -451,7 +461,7 @@ def main() -> None:
     parser.add_argument(
         "-j",
         "--parallel",
-        type=int,
+        type=check_positive,
         help="Parallel option to pass to qmk-compile.",
         default=1,
     )
