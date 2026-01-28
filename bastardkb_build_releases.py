@@ -368,7 +368,7 @@ def build(
     overall_status_task = overall_status.add_task("Preparing…")
     overall_progress_task = overall_progress.add_task("", total=total_firmware_count)
     reporter.set_progress_status(lambda message: overall_status.update(overall_status_task, description=message))
-    reporter.info(f"Preparing to build {total_firmware_count} BastardKB firmwares")
+    reporter.info(f"[bold]Preparing to build {total_firmware_count} BastardKB firmwares[/bold]")
     with Live(progress_group, console=reporter.console):
         for branch, configurations in firmwares:
             # Checkout branch.
@@ -384,17 +384,19 @@ def build(
                             worktree.path / read_firmware_filename_from_logs(firmware, completed_process.log_file)
                         )
                         built_firmware_count += 1
-                        reporter.info(f"    [not bold white]{firmware}[/] [green]ok[/]")
+                        reporter.info(f"    [not bold white]{firmware}[/] [green]✔ Success[/]")
                     except FileNotFoundError:
-                        reporter.warn(f"    [not bold white]{firmware}[/] [yellow]ok[/]")
+                        reporter.warn(f"    [not bold white]{firmware}[/] [yellow]⚠ Built (artifact not found)[/]")
                 else:
-                    reporter.error(f"    [not bold white]{firmware}[/] [red]ko[/]")
+                    reporter.error(f"    [not bold white]{firmware}[/] [red]✘ Failed[/]")
                     reporter.error(f"Logs: {completed_process.log_file}")
                 overall_progress.update(overall_progress_task, advance=1)
             reporter.newline()
         overall_status.update(overall_status_task, visible=False)
         empty_status.update(newline_task, visible=False)
-        reporter.info(f"Done: built={built_firmware_count}, failed={total_firmware_count - built_firmware_count}")
+        reporter.info(
+            f"Done: built=[green]{built_firmware_count}[/], failed=[red]{total_firmware_count - built_firmware_count}[/]"
+        )
 
 
 def copy_firmware_to_output_dir(reporter: Reporter, output_dir: Path, firmware_path: Path):
@@ -429,7 +431,7 @@ def copy_assets_to_output_dir(executor: Executor, reporter: Reporter, output_dir
         dst = output_dir / src.name
         if not executor.dry_run:
             shutil.copyfile(src, dst)
-        reporter.info(f"    [not bold white]{src.name}[/] [green]ok[/]")
+        reporter.info(f"    [not bold white]{src.name}[/] [green]✔ Copied[/]")
         reporter.logging.debug(f"copy: {src} -> {dst}")
 
 
