@@ -230,6 +230,33 @@ class Reporter(object):
         )
         self.logging.error(f"{title}: {message}")
 
+    def print_summary(self, built_count: int, failed_count: int) -> None:
+        total = built_count + failed_count
+        if failed_count == 0:
+            title = "Build Successful"
+            border_style = "green"
+            icon = "✔"
+            message = f"[bold green]{icon} All {total} firmwares built successfully![/bold green]"
+        else:
+            title = "Build Completed with Errors"
+            border_style = "red"
+            icon = "⚠"
+            message = (
+                f"[bold red]{icon} Processed: {total}[/bold red]\n"
+                f"[green]Built: {built_count}[/green]\n"
+                f"[bold red]Failed: {failed_count}[/bold red]"
+            )
+
+        self.console.print(
+            Panel(
+                Text.from_markup(message, justify="center"),
+                title=f"[bold {border_style}]{title}[/bold {border_style}]",
+                border_style=border_style,
+                padding=(1, 2),
+            )
+        )
+        self.logging.info(f"Summary: Built={built_count}, Failed={failed_count}")
+
 
 class QmkCompletedProcess(object):
     def __init__(self, completed_process: subprocess.CompletedProcess, log_file: Path):
@@ -394,7 +421,7 @@ def build(
             reporter.newline()
         overall_status.update(overall_status_task, visible=False)
         empty_status.update(newline_task, visible=False)
-        reporter.info(f"Done: built={built_firmware_count}, failed={total_firmware_count - built_firmware_count}")
+        reporter.print_summary(built_firmware_count, total_firmware_count - built_firmware_count)
 
 
 def copy_firmware_to_output_dir(reporter: Reporter, output_dir: Path, firmware_path: Path):
