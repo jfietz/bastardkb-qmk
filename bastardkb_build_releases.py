@@ -177,9 +177,19 @@ class Reporter(object):
         self.logging = logging.getLogger()
         self.verbose = verbose
 
+        # Secure, persistent directory for application logs
+        home = Path.home()
+        xdg_state_home = os.environ.get("XDG_STATE_HOME", str(home / ".local" / "state"))
+        self.persistent_log_dir = Path(xdg_state_home) / "bastardkb-qmk"
+
+        if not self.persistent_log_dir.exists():
+            self.persistent_log_dir.mkdir(parents=True, mode=0o700)
+        else:
+            self.persistent_log_dir.chmod(0o700)
+
         # Logging setup.
         logging_file_handler = RotatingFileHandler(
-            filename=os.path.join(os.getcwd(), f"{os.path.basename(__file__)}.log"),
+            filename=self.persistent_log_dir / f"{os.path.basename(__file__)}.log",
             encoding="utf-8",
             maxBytes=1024 * 1024,
             backupCount=5,
@@ -188,8 +198,13 @@ class Reporter(object):
         self.logging.addHandler(logging_file_handler)
         self.logging.setLevel(level=logging.DEBUG)
 
+        # Temp dir for this run's build logs
         self.log_dir = tempfile.mkdtemp()
-        self.debug(f"Saving logs in: {self.log_dir}")
+
+        self.console.print(f"Saving application logs in: {self.persistent_log_dir}")
+        self.console.print(f"Saving build logs in: {self.log_dir}")
+        self.debug(f"Saving application logs in: {self.persistent_log_dir}")
+        self.debug(f"Saving build logs in: {self.log_dir}")
 
         # Progress status.
         self._progress_status = lambda _: None
