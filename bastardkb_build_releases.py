@@ -452,8 +452,8 @@ def main() -> None:
         "-j",
         "--parallel",
         type=int,
-        help="Parallel option to pass to qmk-compile.",
-        default=1,
+        help="Parallel option to pass to qmk-compile. Defaults to the number of CPUs.",
+        default=os.cpu_count() or 1,
     )
     parser.add_argument("-v", "--verbose", action="store_true", help="Enable verbose output.")
     parser.add_argument(
