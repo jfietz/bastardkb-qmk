@@ -1,3 +1,5 @@
 /.build/
 /bastardkb_build_releases.py.log
 /lib/
+__pycache__/
+*.pyc
