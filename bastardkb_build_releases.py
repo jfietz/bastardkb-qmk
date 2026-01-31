@@ -33,6 +33,7 @@ from rich.progress import (
     TextColumn,
     TimeElapsedColumn,
 )
+from rich.table import Table
 from rich.text import Text
 from typing import NamedTuple, Optional
 
@@ -193,6 +194,25 @@ class Reporter(object):
 
         # Progress status.
         self._progress_status = lambda _: None
+
+    def print_summary(self, results: Sequence[tuple["Firmware", str, Optional[Path]]]) -> None:
+        table = Table(title="Build Summary")
+        table.add_column("Firmware", style="bold white")
+        table.add_column("Status", justify="center")
+        table.add_column("Log File", style="dim")
+
+        for firmware, status, log_file in results:
+            if status == "success":
+                status_render = Text("Success", style="green")
+            elif status == "warning":
+                status_render = Text("Warning", style="yellow")
+            else:
+                status_render = Text("Failure", style="red")
+
+            log_str = str(log_file) if log_file else ""
+            table.add_row(str(firmware), status_render, log_str)
+
+        self.console.print(table)
 
     def log_file(self, basename: str) -> Path:
         return Path(self.log_dir, basename).with_suffix(".log")
@@ -364,6 +384,7 @@ def build(
 
     total_firmware_count = reduce(total_firmware_count_reduce_callback, firmwares, 0)
     built_firmware_count = 0
+    results = []
     newline_task = empty_status.add_task("")
     overall_status_task = overall_status.add_task("Preparing…")
     overall_progress_task = overall_progress.add_task("", total=total_firmware_count)
@@ -385,16 +406,20 @@ def build(
                         )
                         built_firmware_count += 1
                         reporter.info(f"    [not bold white]{firmware}[/] [green]ok[/]")
+                        results.append((firmware, "success", None))
                     except FileNotFoundError:
                         reporter.warn(f"    [not bold white]{firmware}[/] [yellow]ok[/]")
+                        results.append((firmware, "warning", completed_process.log_file))
                 else:
                     reporter.error(f"    [not bold white]{firmware}[/] [red]ko[/]")
                     reporter.error(f"Logs: {completed_process.log_file}")
+                    results.append((firmware, "failure", completed_process.log_file))
                 overall_progress.update(overall_progress_task, advance=1)
             reporter.newline()
         overall_status.update(overall_status_task, visible=False)
         empty_status.update(newline_task, visible=False)
         reporter.info(f"Done: built={built_firmware_count}, failed={total_firmware_count - built_firmware_count}")
+        reporter.print_summary(results)
 
 
 def copy_firmware_to_output_dir(reporter: Reporter, output_dir: Path, firmware_path: Path):
