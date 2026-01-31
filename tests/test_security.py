@@ -8,6 +8,15 @@ import subprocess
 # Add root to sys.path
 sys.path.append(os.path.abspath(os.path.join(os.path.dirname(__file__), '..')))
 
+# Mock dependencies that might not be installed
+sys.modules['pygit2'] = MagicMock()
+sys.modules['rich'] = MagicMock()
+sys.modules['rich.console'] = MagicMock()
+sys.modules['rich.live'] = MagicMock()
+sys.modules['rich.panel'] = MagicMock()
+sys.modules['rich.progress'] = MagicMock()
+sys.modules['rich.text'] = MagicMock()
+
 import bastardkb_build_releases as bkb
 
 class TestSecurity(unittest.TestCase):

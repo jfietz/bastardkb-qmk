@@ -453,7 +453,8 @@ def main() -> None:
         "--parallel",
         type=int,
         help="Parallel option to pass to qmk-compile.",
-        default=1,
+        # Bolt Optimization: Default to using all available CPU cores to speed up compilation.
+        default=os.cpu_count() or 1,
     )
     parser.add_argument("-v", "--verbose", action="store_true", help="Enable verbose output.")
     parser.add_argument(
