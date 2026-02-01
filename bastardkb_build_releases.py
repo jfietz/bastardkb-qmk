@@ -196,6 +196,30 @@ class Reporter(object):
         self._progress_status = lambda _: None
 
     def print_summary(self, results: Sequence[tuple["Firmware", str, Optional[Path]]]) -> None:
+        success_count = sum(1 for _, status, _ in results if status == "success")
+        total_count = len(results)
+        failed_count = total_count - success_count
+
+        if failed_count == 0:
+            self.console.print(
+                Panel(
+                    Text("All firmwares built successfully! 🎉", justify="center", style="bold green"),
+                    title="[bold green]Success[/bold green]",
+                    border_style="green",
+                    padding=(1, 2),
+                )
+            )
+        else:
+            self.console.print(
+                Panel(
+                    Text(f"{success_count} built\n{failed_count} failed", justify="center"),
+                    title="[bold red]Build Completed with Errors[/bold red]",
+                    border_style="red",
+                    padding=(1, 2),
+                )
+            )
+        self.logging.info(f"Done: built={success_count}, failed={failed_count}")
+
         table = Table(title="Build Summary")
         table.add_column("Firmware", style="bold white")
         table.add_column("Status", justify="center")
@@ -418,7 +442,6 @@ def build(
             reporter.newline()
         overall_status.update(overall_status_task, visible=False)
         empty_status.update(newline_task, visible=False)
-        reporter.info(f"Done: built={built_firmware_count}, failed={total_firmware_count - built_firmware_count}")
         reporter.print_summary(results)
 
 
@@ -477,8 +500,8 @@ def main() -> None:
         "-j",
         "--parallel",
         type=int,
-        help="Parallel option to pass to qmk-compile.",
-        default=1,
+        help="Parallel option to pass to qmk-compile. Defaults to number of CPUs (%(default)s).",
+        default=os.cpu_count() or 1,
     )
     parser.add_argument("-v", "--verbose", action="store_true", help="Enable verbose output.")
     parser.add_argument(
