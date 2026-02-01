@@ -277,7 +277,12 @@ class Executor(object):
             if worktree is None:
                 raise GitError
         except GitError:
-            self.reporter.fatal(f"Worktree does not exist: {branch}", title="Git Error")
+            self.reporter.fatal(
+                f"Worktree does not exist: {branch}\n\n"
+                f"You can create it by running:\n"
+                f"  git worktree add <path> {branch}",
+                title="Git Error",
+            )
             sys.exit(1)
         if not self.dry_run:
             # TODO: checkout worktree if it does not exist.
@@ -504,6 +509,15 @@ def main() -> None:
 
     # Install SIGINT handler.
     signal.signal(signal.SIGINT, partial(sigint_handler, reporter))
+
+    # Check for required dependencies.
+    for command in ("qmk", "git"):
+        if shutil.which(command) is None:
+            reporter.fatal(
+                f"The '{command}' command was not found.\n\nPlease ensure it is installed and available in your PATH.",
+                title="Dependency Error",
+            )
+            sys.exit(1)
 
     # Open QMK repository.
     try:
