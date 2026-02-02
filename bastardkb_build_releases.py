@@ -177,9 +177,29 @@ class Reporter(object):
         self.logging = logging.getLogger()
         self.verbose = verbose
 
+        # Determine secure log directory (XDG Base Directory specification)
+        xdg_state_home = os.environ.get("XDG_STATE_HOME")
+        if xdg_state_home:
+            state_dir = Path(xdg_state_home)
+        else:
+            state_dir = Path.home() / ".local" / "state"
+
+        self.app_log_dir = state_dir / "bastardkb-qmk"
+
+        # Ensure directory exists with secure permissions (0700)
+        # This prevents other users from reading logs which might contain sensitive info
+        try:
+            self.app_log_dir.mkdir(parents=True, exist_ok=True)
+            os.chmod(self.app_log_dir, 0o700)
+            log_file_path = self.app_log_dir / f"{os.path.basename(__file__)}.log"
+        except (OSError, RuntimeError):
+            # Fallback to temp directory if we can't write to state dir (e.g. HOME not set)
+            self.app_log_dir = Path(tempfile.mkdtemp())
+            log_file_path = self.app_log_dir / f"{os.path.basename(__file__)}.log"
+
         # Logging setup.
         logging_file_handler = RotatingFileHandler(
-            filename=os.path.join(os.getcwd(), f"{os.path.basename(__file__)}.log"),
+            filename=log_file_path,
             encoding="utf-8",
             maxBytes=1024 * 1024,
             backupCount=5,
@@ -190,6 +210,7 @@ class Reporter(object):
 
         self.log_dir = tempfile.mkdtemp()
         self.debug(f"Saving logs in: {self.log_dir}")
+        self.debug(f"Persistent log: {log_file_path}")
 
         # Progress status.
         self._progress_status = lambda _: None
