@@ -60,5 +60,44 @@ class TestUX(unittest.TestCase):
         self.assertIsInstance(args[0], Panel)
         self.assertIn("Build Completed with Errors", args[0].title)
 
+    @patch("bastardkb_build_releases.shutil.which")
+    @patch("bastardkb_build_releases.sys.exit")
+    def test_check_dependencies_missing(self, mock_exit, mock_which):
+        """Verify check_dependencies exits if dependencies are missing."""
+        # Simulate 'qmk' missing, 'git' present
+        def side_effect(cmd):
+            if cmd == "qmk":
+                return None
+            return "/usr/bin/git"
+
+        mock_which.side_effect = side_effect
+
+        reporter = MagicMock()
+
+        # Call the function directly to test it in isolation
+        bkb.check_dependencies(reporter)
+
+        # Check if fatal was called with correct message
+        reporter.fatal.assert_called_once()
+        args, kwargs = reporter.fatal.call_args
+        self.assertIn("missing: qmk", args[0])
+        self.assertEqual(kwargs.get('title'), "Missing Dependencies")
+
+        # Check if sys.exit(1) was called
+        mock_exit.assert_called_once_with(1)
+
+    @patch("bastardkb_build_releases.shutil.which")
+    def test_check_dependencies_present(self, mock_which):
+        """Verify check_dependencies does not exit if dependencies are present."""
+        mock_which.return_value = "/usr/bin/path"
+        reporter = MagicMock()
+
+        try:
+            bkb.check_dependencies(reporter)
+        except SystemExit:
+            self.fail("check_dependencies raised SystemExit unexpectedly!")
+
+        reporter.fatal.assert_not_called()
+
 if __name__ == '__main__':
     unittest.main()
