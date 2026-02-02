@@ -13,9 +13,9 @@ import sys
 import tempfile
 
 from collections.abc import Callable, Sequence
-from functools import partial, reduce
+from functools import partial
+from itertools import chain
 from logging.handlers import RotatingFileHandler
-from operator import iconcat
 from pathlib import Path, PurePath
 from pygit2 import (
     GitError,
@@ -315,7 +315,7 @@ class Executor(object):
             f"TARGET={firmware.output_filename}",
             "--env",
             "USE_CCACHE=yes",
-            *reduce(iconcat, (("-e", env_var) for env_var in firmware.env_vars), []),
+            *chain.from_iterable(("-e", env_var) for env_var in firmware.env_vars),
         )
         log_file = self.reporter.log_file(f"qmk-compile-{firmware.output_filename}")
         return QmkCompletedProcess(self._run(argv, log_file=log_file, cwd=worktree.path), log_file)
@@ -334,10 +334,6 @@ class Executor(object):
                 kwargs["stderr"] = fd
                 return subprocess.run(argv, **kwargs)
         return subprocess.CompletedProcess(args=argv, returncode=0)
-
-
-def total_firmware_count_reduce_callback(acc: int, firmware_list: FirmwareList) -> int:
-    return acc + len(list(firmware_list.configurations))
 
 
 def read_firmware_filename_from_logs(firmware: Firmware, log_file: Path) -> Path:
@@ -384,7 +380,7 @@ def build(
     )
     progress_group = Group(empty_status, overall_status, overall_progress)
 
-    total_firmware_count = reduce(total_firmware_count_reduce_callback, firmwares, 0)
+    total_firmware_count = sum(len(fl.configurations) for fl in firmwares)
     built_firmware_count = 0
     newline_task = empty_status.add_task("")
     overall_status_task = overall_status.add_task("Preparing…")
