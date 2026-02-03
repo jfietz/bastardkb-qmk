@@ -178,8 +178,20 @@ class Reporter(object):
         self.verbose = verbose
 
         # Logging setup.
+        xdg_state_home = os.environ.get("XDG_STATE_HOME") or os.path.expanduser("~/.local/state")
+        app_state_dir = Path(xdg_state_home) / "bastardkb-qmk"
+
+        try:
+            app_state_dir.mkdir(parents=True, exist_ok=True)
+            app_state_dir.chmod(0o700)
+            log_file_path = app_state_dir / f"{os.path.basename(__file__)}.log"
+        except OSError:
+            # Fallback to a temporary directory if XDG state home is not accessible
+            temp_dir = Path(tempfile.mkdtemp())
+            log_file_path = temp_dir / f"{os.path.basename(__file__)}.log"
+
         logging_file_handler = RotatingFileHandler(
-            filename=os.path.join(os.getcwd(), f"{os.path.basename(__file__)}.log"),
+            filename=log_file_path,
             encoding="utf-8",
             maxBytes=1024 * 1024,
             backupCount=5,
