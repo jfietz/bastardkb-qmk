@@ -60,5 +60,38 @@ class TestUX(unittest.TestCase):
         self.assertIsInstance(args[0], Panel)
         self.assertIn("Build Completed with Errors", args[0].title)
 
+    @patch('bastardkb_build_releases.shutil.which')
+    def test_check_dependencies_missing(self, mock_which):
+        """Verify check_dependencies fails gracefully when tools are missing."""
+        # Simulate 'qmk' missing, 'git' present
+        def side_effect(arg):
+            if arg == 'git':
+                return '/usr/bin/git'
+            return None
+        mock_which.side_effect = side_effect
+
+        reporter = MagicMock()
+
+        with self.assertRaises(SystemExit) as cm:
+            bkb.check_dependencies(reporter)
+
+        self.assertEqual(cm.exception.code, 1)
+
+        # Verify reporter.fatal was called
+        self.assertTrue(reporter.fatal.called)
+        call_args = reporter.fatal.call_args
+        # call_args is (args, kwargs)
+        # args[0] is message
+        message = call_args[0][0]
+        self.assertIn("qmk", message)
+        self.assertIn("missing", message)
+
+        # Check title
+        if 'title' in call_args[1]:
+            title = call_args[1]['title']
+        else:
+            title = call_args[0][1]  # fallback if positional
+        self.assertEqual(title, "Missing Dependencies")
+
 if __name__ == '__main__':
     unittest.main()
