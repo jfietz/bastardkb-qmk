@@ -455,6 +455,16 @@ def copy_assets_to_output_dir(executor: Executor, reporter: Reporter, output_dir
         reporter.logging.debug(f"copy: {src} -> {dst}")
 
 
+def check_dependencies(reporter: Reporter) -> None:
+    for command in ("git", "qmk"):
+        if shutil.which(command) is None:
+            reporter.fatal(
+                f"Command not found: {command}\n\nPlease install {command} and ensure it is in your PATH.",
+                title="Dependency Error",
+            )
+            sys.exit(1)
+
+
 def sigint_handler(reporter: Reporter, signal, frame):
     del signal, frame
     reporter.progress_status("Interrupted. Exiting…")
@@ -501,6 +511,9 @@ def main() -> None:
     )
     cmdline_args = parser.parse_args()
     reporter = Reporter(cmdline_args.verbose)
+
+    # Check dependencies.
+    check_dependencies(reporter)
 
     # Install SIGINT handler.
     signal.signal(signal.SIGINT, partial(sigint_handler, reporter))
