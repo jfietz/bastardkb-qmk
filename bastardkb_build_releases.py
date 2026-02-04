@@ -178,8 +178,18 @@ class Reporter(object):
         self.verbose = verbose
 
         # Logging setup.
+        # Use XDG_STATE_HOME for logs, defaulting to ~/.local/state/bastardkb-qmk
+        xdg_state_home = os.environ.get("XDG_STATE_HOME", os.path.expanduser("~/.local/state"))
+        app_log_dir = Path(xdg_state_home) / "bastardkb-qmk"
+        try:
+            app_log_dir.mkdir(parents=True, exist_ok=True)
+            app_log_dir.chmod(0o700)
+        except OSError:
+            # Fallback to temp dir if we can't create/chmod the state dir
+            app_log_dir = Path(tempfile.mkdtemp())
+
         logging_file_handler = RotatingFileHandler(
-            filename=os.path.join(os.getcwd(), f"{os.path.basename(__file__)}.log"),
+            filename=str(app_log_dir / f"{os.path.basename(__file__)}.log"),
             encoding="utf-8",
             maxBytes=1024 * 1024,
             backupCount=5,
