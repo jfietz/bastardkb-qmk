@@ -60,5 +60,41 @@ class TestUX(unittest.TestCase):
         self.assertIsInstance(args[0], Panel)
         self.assertIn("Build Completed with Errors", args[0].title)
 
+    @patch('bastardkb_build_releases.shutil.which')
+    def test_check_dependencies_success(self, mock_which):
+        """Verify check_dependencies does not exit if dependencies exist."""
+        # Mock which to return a path
+        mock_which.return_value = "/usr/bin/git"
+
+        reporter = MagicMock()
+        bkb.check_dependencies(reporter)
+
+        # reporter.fatal should not be called
+        reporter.fatal.assert_not_called()
+
+    @patch('bastardkb_build_releases.shutil.which')
+    @patch('bastardkb_build_releases.sys.exit')
+    def test_check_dependencies_missing_tool(self, mock_exit, mock_which):
+        """Verify check_dependencies exits if a dependency is missing."""
+        # Mock which to return None for "git"
+        def side_effect(cmd):
+            if cmd == "git":
+                return None
+            return "/usr/bin/qmk"
+        mock_which.side_effect = side_effect
+
+        reporter = MagicMock()
+
+        # We expect check_dependencies to call sys.exit(1)
+        bkb.check_dependencies(reporter)
+
+        # Verify exit was called
+        mock_exit.assert_called_with(1)
+
+        # Verify fatal was called with correct message
+        reporter.fatal.assert_called()
+        args, _ = reporter.fatal.call_args
+        self.assertIn("Command not found: git", args[0])
+
 if __name__ == '__main__':
     unittest.main()
