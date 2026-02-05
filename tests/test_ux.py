@@ -60,5 +60,46 @@ class TestUX(unittest.TestCase):
         self.assertIsInstance(args[0], Panel)
         self.assertIn("Build Completed with Errors", args[0].title)
 
+class TestDependencies(unittest.TestCase):
+    @patch('shutil.which')
+    def test_check_dependencies_missing_qmk(self, mock_which):
+        """Verify check_dependencies fatal error when qmk is missing."""
+        # Mock shutil.which to return None for qmk
+        def side_effect(cmd):
+            if cmd == 'qmk':
+                return None
+            return '/usr/bin/' + cmd
+        mock_which.side_effect = side_effect
+
+        reporter = MagicMock()
+
+        # We need to verify that check_dependencies calls reporter.fatal and sys.exit(1)
+        with self.assertRaises(SystemExit) as cm:
+            bkb.check_dependencies(reporter)
+
+        self.assertEqual(cm.exception.code, 1)
+        reporter.fatal.assert_called()
+        args, _ = reporter.fatal.call_args
+        self.assertIn("qmk", args[0].lower())
+
+    @patch('shutil.which')
+    def test_check_dependencies_missing_git(self, mock_which):
+        """Verify check_dependencies fatal error when git is missing."""
+        def side_effect(cmd):
+            if cmd == 'git':
+                return None
+            return '/usr/bin/' + cmd
+        mock_which.side_effect = side_effect
+
+        reporter = MagicMock()
+
+        with self.assertRaises(SystemExit) as cm:
+            bkb.check_dependencies(reporter)
+
+        self.assertEqual(cm.exception.code, 1)
+        reporter.fatal.assert_called()
+        args, _ = reporter.fatal.call_args
+        self.assertIn("git", args[0].lower())
+
 if __name__ == '__main__':
     unittest.main()
