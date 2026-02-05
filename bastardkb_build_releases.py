@@ -455,6 +455,20 @@ def copy_assets_to_output_dir(executor: Executor, reporter: Reporter, output_dir
         reporter.logging.debug(f"copy: {src} -> {dst}")
 
 
+def check_dependencies(reporter: Reporter) -> None:
+    if not shutil.which("git"):
+        reporter.fatal(
+            "Git is not installed or not in the PATH.\nPlease install Git to use this tool.", title="Dependency Error"
+        )
+        sys.exit(1)
+    if not shutil.which("qmk"):
+        reporter.fatal(
+            "QMK CLI is not installed or not in the PATH.\nPlease install qmk (pip install qmk) to use this tool.",
+            title="Dependency Error",
+        )
+        sys.exit(1)
+
+
 def sigint_handler(reporter: Reporter, signal, frame):
     del signal, frame
     reporter.progress_status("Interrupted. Exiting…")
@@ -504,6 +518,9 @@ def main() -> None:
 
     # Install SIGINT handler.
     signal.signal(signal.SIGINT, partial(sigint_handler, reporter))
+
+    # Check dependencies.
+    check_dependencies(reporter)
 
     # Open QMK repository.
     try:
