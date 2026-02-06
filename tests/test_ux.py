@@ -60,5 +60,42 @@ class TestUX(unittest.TestCase):
         self.assertIsInstance(args[0], Panel)
         self.assertIn("Build Completed with Errors", args[0].title)
 
+    @patch("shutil.which")
+    def test_check_dependencies_success(self, mock_which):
+        """Verify check_dependencies passes when dependencies exist."""
+        # Mock shutil.which to always return a path
+        mock_which.return_value = "/usr/bin/cmd"
+
+        reporter = MagicMock()
+        try:
+            bkb.check_dependencies(reporter)
+        except SystemExit:
+            self.fail("check_dependencies raised SystemExit unexpectedly!")
+
+        # Verify it checked for qmk and git
+        mock_which.assert_any_call("qmk")
+        mock_which.assert_any_call("git")
+
+    @patch("shutil.which")
+    def test_check_dependencies_missing_qmk(self, mock_which):
+        """Verify check_dependencies fails when qmk is missing."""
+        # Mock shutil.which to return None for qmk
+        def side_effect(cmd):
+            if cmd == "qmk":
+                return None
+            return "/usr/bin/git"
+        mock_which.side_effect = side_effect
+
+        reporter = MagicMock()
+
+        with self.assertRaises(SystemExit) as cm:
+            bkb.check_dependencies(reporter)
+
+        self.assertEqual(cm.exception.code, 1)
+        reporter.fatal.assert_called()
+        args, _ = reporter.fatal.call_args
+        self.assertIn("qmk", args[0])
+        self.assertIn("required but was not found", args[0])
+
 if __name__ == '__main__':
     unittest.main()

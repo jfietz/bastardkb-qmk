@@ -455,6 +455,16 @@ def copy_assets_to_output_dir(executor: Executor, reporter: Reporter, output_dir
         reporter.logging.debug(f"copy: {src} -> {dst}")
 
 
+def check_dependencies(reporter: Reporter) -> None:
+    for command in ("qmk", "git"):
+        if not shutil.which(command):
+            reporter.fatal(
+                f"The command [bold]{command}[/bold] is required but was not found in your PATH.\n\nPlease install it and try again.",
+                title="Missing Dependency",
+            )
+            sys.exit(1)
+
+
 def sigint_handler(reporter: Reporter, signal, frame):
     del signal, frame
     reporter.progress_status("Interrupted. Exiting…")
@@ -504,6 +514,9 @@ def main() -> None:
 
     # Install SIGINT handler.
     signal.signal(signal.SIGINT, partial(sigint_handler, reporter))
+
+    # Check dependencies.
+    check_dependencies(reporter)
 
     # Open QMK repository.
     try:

@@ -5,3 +5,7 @@
 ## 2024-05-24 - [Smart Defaults in CLI]
 **Learning:** Build tools that default to single-threaded execution on modern hardware create a sluggish first impression. Auto-detecting resources (like `os.cpu_count()`) respects the user's hardware and time, making the tool feel "smart" out of the box.
 **Action:** Inspect CLI default arguments for performance bottlenecks and replace static defaults with dynamic, environment-aware values where safe.
+
+## 2025-05-22 - [Proactive Dependency Checks]
+**Learning:** CLI tools that fail midway due to missing dependencies cause frustration and wasted context switching. Validating the environment upfront (Pre-flight checks) builds trust and guides the user to a solution before they even encounter a problem.
+**Action:** Identify external command dependencies and verify their existence at startup, providing clear installation instructions if missing.
