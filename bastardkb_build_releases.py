@@ -288,7 +288,7 @@ class Executor(object):
                 )
                 # TODO: use pygit2 to update submodules.
                 completed_process = self._run(
-                    ("git", "submodule", "update", "--init", "--recursive"),
+                    ("git", "submodule", "update", "--init", "--recursive", "--jobs", str(self.parallel)),
                     log_file=self.reporter.log_file(f"git-submodule-update-{worktree.name}"),
                     cwd=worktree.path,
                 )
