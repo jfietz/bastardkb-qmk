@@ -177,22 +177,9 @@ class Reporter(object):
         self.logging = logging.getLogger()
         self.verbose = verbose
 
-        # Determine secure log directory
-        xdg_state_home = os.environ.get("XDG_STATE_HOME", os.path.expanduser("~/.local/state"))
-        self.app_state_dir = Path(xdg_state_home) / "bastardkb-qmk"
-
-        try:
-            self.app_state_dir.mkdir(parents=True, exist_ok=True)
-            self.app_state_dir.chmod(0o700)
-        except OSError:
-            # Fallback to temp dir if we can't create/chmod the state dir
-            self.app_state_dir = Path(tempfile.mkdtemp())
-
-        log_file = self.app_state_dir / f"{os.path.basename(__file__)}.log"
-
         # Logging setup.
         logging_file_handler = RotatingFileHandler(
-            filename=str(log_file),
+            filename=os.path.join(os.getcwd(), f"{os.path.basename(__file__)}.log"),
             encoding="utf-8",
             maxBytes=1024 * 1024,
             backupCount=5,
@@ -203,7 +190,6 @@ class Reporter(object):
 
         self.log_dir = tempfile.mkdtemp()
         self.debug(f"Saving logs in: {self.log_dir}")
-        self.debug(f"Main log file: {log_file}")
 
         # Progress status.
         self._progress_status = lambda _: None
