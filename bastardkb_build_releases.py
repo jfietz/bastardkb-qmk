@@ -178,8 +178,16 @@ class Reporter(object):
         self.verbose = verbose
 
         # Logging setup.
+        xdg_state_home = os.environ.get("XDG_STATE_HOME", os.path.expanduser("~/.local/state"))
+        log_dir = Path(xdg_state_home) / "bastardkb-qmk"
+        original_umask = os.umask(0o077)
+        try:
+            log_dir.mkdir(parents=True, exist_ok=True)
+        finally:
+            os.umask(original_umask)
+
         logging_file_handler = RotatingFileHandler(
-            filename=os.path.join(os.getcwd(), f"{os.path.basename(__file__)}.log"),
+            filename=log_dir / f"{os.path.basename(__file__)}.log",
             encoding="utf-8",
             maxBytes=1024 * 1024,
             backupCount=5,
