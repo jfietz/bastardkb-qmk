@@ -4,6 +4,8 @@ import unittest
 from unittest.mock import MagicMock, patch
 from pathlib import Path
 import subprocess
+import tempfile
+import stat
 
 # Add root to sys.path
 sys.path.append(os.path.abspath(os.path.join(os.path.dirname(__file__), '..')))
@@ -44,6 +46,40 @@ class TestSecurity(unittest.TestCase):
                 found = True
                 break
         self.assertTrue(found, "git submodule update was not called")
+
+    @patch('bastardkb_build_releases.RotatingFileHandler')
+    def test_log_file_security(self, mock_handler):
+        # Mock the handler instance to avoid issues with return values if needed
+        mock_handler_instance = MagicMock()
+        # Set a level attribute on the mock instance because logging.getLogger().addHandler() might inspect it
+        # or subsequent code might interact with it.
+        mock_handler_instance.level = 0
+        mock_handler.return_value = mock_handler_instance
+
+        with tempfile.TemporaryDirectory() as tmpdir:
+            with patch.dict(os.environ, {'XDG_STATE_HOME': tmpdir}):
+                # Mock Console and logging.getLogger to avoid side effects
+                with patch('bastardkb_build_releases.Console'), \
+                     patch('bastardkb_build_releases.logging.getLogger'):
+
+                    reporter = bkb.Reporter(verbose=False)
+
+                    # Verify directory creation
+                    expected_dir = Path(tmpdir) / "bastardkb-qmk"
+
+                    # Assertions that will fail until implemented
+                    self.assertTrue(expected_dir.exists(), "Log directory not created")
+                    self.assertTrue(expected_dir.is_dir(), "Log path is not a directory")
+
+                    # Verify permissions (0700)
+                    mode = expected_dir.stat().st_mode & 0o777
+                    self.assertEqual(mode, 0o700, "Log directory permissions are not 0700")
+
+                    # Verify RotatingFileHandler called with correct path
+                    expected_log_file = expected_dir / "bastardkb_build_releases.py.log"
+                    mock_handler.assert_called()
+                    call_kwargs = mock_handler.call_args[1]
+                    self.assertEqual(str(call_kwargs['filename']), str(expected_log_file))
 
 if __name__ == '__main__':
     unittest.main()
