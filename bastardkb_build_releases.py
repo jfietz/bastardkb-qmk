@@ -242,9 +242,16 @@ class Reporter(object):
                 )
             )
         else:
+            success_rate = (success_count / total_count) * 100
+            summary_text = Text(justify="center")
+            summary_text.append(f"{success_count} built ({success_rate:.1f}%)\n", style="green")
+            summary_text.append(f"{failed_count} failed\n\n", style="bold red")
+            summary_text.append("Check logs for details:\n")
+            summary_text.append(f"{self.log_dir}", style="underline")
+
             self.console.print(
                 Panel(
-                    Text(f"{success_count} built\n{failed_count} failed", justify="center"),
+                    summary_text,
                     title="[bold red]Build Completed with Errors[/bold red]",
                     border_style="red",
                     padding=(1, 2),

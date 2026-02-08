@@ -60,5 +60,12 @@ class TestUX(unittest.TestCase):
         self.assertIsInstance(args[0], Panel)
         self.assertIn("Build Completed with Errors", args[0].title)
 
+        # Verify content includes percentage and log dir
+        renderable = args[0].renderable
+        # renderable is a Text object (rich.text.Text)
+        text_content = renderable.plain
+        self.assertIn("80.0%", text_content)
+        self.assertIn(str(reporter.log_dir), text_content)
+
 if __name__ == '__main__':
     unittest.main()
