@@ -177,9 +177,12 @@ class Reporter(object):
         self.logging = logging.getLogger()
         self.verbose = verbose
 
+        self.log_dir = tempfile.mkdtemp()
+        self.console.print(f"Saving logs in: [bold cyan]{self.log_dir}[/bold cyan]")
+
         # Logging setup.
         logging_file_handler = RotatingFileHandler(
-            filename=os.path.join(os.getcwd(), f"{os.path.basename(__file__)}.log"),
+            filename=os.path.join(self.log_dir, f"{os.path.basename(__file__)}.log"),
             encoding="utf-8",
             maxBytes=1024 * 1024,
             backupCount=5,
@@ -187,9 +190,6 @@ class Reporter(object):
         logging_file_handler.setFormatter(logging.Formatter(fmt="%(asctime)s %(levelname)s %(message)s"))
         self.logging.addHandler(logging_file_handler)
         self.logging.setLevel(level=logging.DEBUG)
-
-        self.log_dir = tempfile.mkdtemp()
-        self.debug(f"Saving logs in: {self.log_dir}")
 
         # Progress status.
         self._progress_status = lambda _: None
