@@ -163,12 +163,8 @@ ALL_FIRMWARES: Sequence[FirmwareList] = (
                     "MIRYOKU_EXTRA=COLEMAKDH",
                 ),
             ),
-            Firmware(
-                keyboard="dilemma/3x5_2/assembled", keymap="via", keymap_alias="stock"
-            ),
-            Firmware(
-                keyboard="dilemma/3x5_2/splinky", keymap="via", keymap_alias="stock"
-            ),
+            Firmware(keyboard="dilemma/3x5_2/assembled", keymap="via", keymap_alias="stock"),
+            Firmware(keyboard="dilemma/3x5_2/splinky", keymap="via", keymap_alias="stock"),
             Firmware(keyboard="dilemma/3x5_3", keymap="via", keymap_alias="stock"),
         ),
     ),
@@ -188,9 +184,7 @@ class Reporter(object):
             maxBytes=1024 * 1024,
             backupCount=5,
         )
-        logging_file_handler.setFormatter(
-            logging.Formatter(fmt="%(asctime)s %(levelname)s %(message)s")
-        )
+        logging_file_handler.setFormatter(logging.Formatter(fmt="%(asctime)s %(levelname)s %(message)s"))
         self.logging.addHandler(logging_file_handler)
         self.logging.setLevel(level=logging.DEBUG)
 
@@ -231,10 +225,7 @@ class Reporter(object):
     def fatal(self, message: str, title: str = "Error") -> None:
         self.console.print(
             Panel(
-                Text(message, justify="center"),
-                title=f"[bold red]{title}[/bold red]",
-                border_style="red",
-                padding=(1, 2),
+                Text(message, justify="center"), title=f"[bold red]{title}[/bold red]", border_style="red", padding=(1, 2)
             )
         )
         self.logging.error(f"{title}: {message}")
@@ -244,11 +235,7 @@ class Reporter(object):
         if failed_count == 0:
             self.console.print(
                 Panel(
-                    Text(
-                        "All firmwares built successfully! 🎉",
-                        justify="center",
-                        style="bold green",
-                    ),
+                    Text("All firmwares built successfully! 🎉", justify="center", style="bold green"),
                     title="[bold green]Success[/bold green]",
                     border_style="green",
                     padding=(1, 2),
@@ -257,10 +244,7 @@ class Reporter(object):
         else:
             self.console.print(
                 Panel(
-                    Text(
-                        f"{success_count} built\n{failed_count} failed",
-                        justify="center",
-                    ),
+                    Text(f"{success_count} built\n{failed_count} failed", justify="center"),
                     title="[bold red]Build Completed with Errors[/bold red]",
                     border_style="red",
                     padding=(1, 2),
@@ -280,18 +264,14 @@ class QmkCompletedProcess(object):
 
 
 class Executor(object):
-    def __init__(
-        self, reporter: Reporter, repository: Repository, dry_run: bool, parallel: int
-    ):
+    def __init__(self, reporter: Reporter, repository: Repository, dry_run: bool, parallel: int):
         self.dry_run = dry_run
         self.parallel = parallel
         self.reporter = reporter
         self.repository = repository
 
     def git_ensure_worktree(self, branch: str, update_submodules: bool) -> Worktree:
-        self.reporter.progress_status(
-            f"Checking out [bright_magenta]{branch}[/bright_magenta]…"
-        )
+        self.reporter.progress_status(f"Checking out [bright_magenta]{branch}[/bright_magenta]…")
         try:
             worktree = self.repository.lookup_worktree(branch)
             if worktree is None:
@@ -317,26 +297,17 @@ class Executor(object):
                         "--jobs",
                         str(self.parallel),
                     ),
-                    log_file=self.reporter.log_file(
-                        f"git-submodule-update-{worktree.name}"
-                    ),
+                    log_file=self.reporter.log_file(f"git-submodule-update-{worktree.name}"),
                     cwd=worktree.path,
                 )
                 if completed_process.returncode != 0:
-                    self.reporter.fatal(
-                        f"Failed to update submodules for {worktree.name}",
-                        title="Submodule Error",
-                    )
+                    self.reporter.fatal(f"Failed to update submodules for {worktree.name}", title="Submodule Error")
                     sys.exit(1)
         else:
-            self.reporter.progress_status(
-                f"([bright_magenta]{worktree.name}[/bright_magenta]) Updating submodules…"
-            )
+            self.reporter.progress_status(f"([bright_magenta]{worktree.name}[/bright_magenta]) Updating submodules…")
         return worktree
 
-    def qmk_compile(
-        self, firmware: Firmware, worktree: Worktree
-    ) -> QmkCompletedProcess:
+    def qmk_compile(self, firmware: Firmware, worktree: Worktree) -> QmkCompletedProcess:
         self.reporter.progress_status(f"Compiling [bold white]{firmware}[/bold white]")
         argv = (
             "qmk",
@@ -355,9 +326,7 @@ class Executor(object):
             *reduce(iconcat, (("-e", env_var) for env_var in firmware.env_vars), []),
         )
         log_file = self.reporter.log_file(f"qmk-compile-{firmware.output_filename}")
-        return QmkCompletedProcess(
-            self._run(argv, log_file=log_file, cwd=worktree.path), log_file
-        )
+        return QmkCompletedProcess(self._run(argv, log_file=log_file, cwd=worktree.path), log_file)
 
     def _run(
         self,
@@ -399,14 +368,7 @@ def apply_filter(
         filter(
             lambda firmware_list: len(firmware_list.configurations),
             tuple(
-                FirmwareList(
-                    branch,
-                    tuple(
-                        firmware
-                        for firmware in configurations
-                        if pattern.match(str(firmware))
-                    ),
-                )
+                FirmwareList(branch, tuple(firmware for firmware in configurations if pattern.match(str(firmware))))
                 for branch, configurations in firmwares
             ),
         )
@@ -435,16 +397,12 @@ def build(
     newline_task = empty_status.add_task("")
     overall_status_task = overall_status.add_task("Preparing…")
     overall_progress_task = overall_progress.add_task("", total=total_firmware_count)
-    reporter.set_progress_status(
-        lambda message: overall_status.update(overall_status_task, description=message)
-    )
+    reporter.set_progress_status(lambda message: overall_status.update(overall_status_task, description=message))
     reporter.info(f"Preparing to build {total_firmware_count} BastardKB firmwares")
     with Live(progress_group, console=reporter.console):
         for branch, configurations in firmwares:
             # Checkout branch.
-            reporter.info(
-                f"  Building off branch [magenta]{branch}[/] ({len(configurations)} firmwares)"
-            )
+            reporter.info(f"  Building off branch [magenta]{branch}[/] ({len(configurations)} firmwares)")
             worktree = executor.git_ensure_worktree(branch, update_submodules=True)
 
             # Build firmwares off that branch.
@@ -453,17 +411,12 @@ def build(
                 if completed_process.returncode == 0:
                     try:
                         on_firmware_compiled(
-                            worktree.path
-                            / read_firmware_filename_from_logs(
-                                firmware, completed_process.log_file
-                            )
+                            worktree.path / read_firmware_filename_from_logs(firmware, completed_process.log_file)
                         )
                         built_firmware_count += 1
                         reporter.info(f"    [not bold white]{firmware}[/] [green]ok[/]")
                     except FileNotFoundError:
-                        reporter.warn(
-                            f"    [not bold white]{firmware}[/] [yellow]ok[/]"
-                        )
+                        reporter.warn(f"    [not bold white]{firmware}[/] [yellow]ok[/]")
                 else:
                     reporter.error(f"    [not bold white]{firmware}[/] [red]ko[/]")
                     reporter.error(f"Logs: {completed_process.log_file}")
@@ -474,9 +427,7 @@ def build(
         reporter.print_summary(built_firmware_count, total_firmware_count)
 
 
-def copy_firmware_to_output_dir(
-    reporter: Reporter, output_dir: Path, firmware_path: Path
-):
+def copy_firmware_to_output_dir(reporter: Reporter, output_dir: Path, firmware_path: Path):
     try:
         target = output_dir / firmware_path.name
         if firmware_path != target:
@@ -488,9 +439,7 @@ def copy_firmware_to_output_dir(
         reporter.logging.exception("failed to copy firmware to output directory")
 
 
-def copy_assets_to_output_dir(
-    executor: Executor, reporter: Reporter, output_dir: Path, repository_path: Path
-):
+def copy_assets_to_output_dir(executor: Executor, reporter: Reporter, output_dir: Path, repository_path: Path):
     reporter.newline()
     reporter.info("Copying BastardKB firmwares assets")
 
@@ -505,9 +454,7 @@ def copy_assets_to_output_dir(
         return
 
     via_json_list = [f for f in via_json_dir.glob("*.via.json") if f.is_file()]
-    reporter.info(
-        f"  Copying [magenta]Via[/] definition files ({len(via_json_list)} files)"
-    )
+    reporter.info(f"  Copying [magenta]Via[/] definition files ({len(via_json_list)} files)")
     for src in via_json_list:
         dst = output_dir / src.name
         if not executor.dry_run:
@@ -524,9 +471,7 @@ def sigint_handler(reporter: Reporter, signal, frame):
 
 def main() -> None:
     # Parse command line arguments.
-    parser = argparse.ArgumentParser(
-        description="Create Bastard Keyboard firmware release."
-    )
+    parser = argparse.ArgumentParser(description="Create Bastard Keyboard firmware release.")
     parser.add_argument(
         "-n",
         "--dry-run",
@@ -540,9 +485,7 @@ def main() -> None:
         help="Parallel option to pass to qmk-compile. Defaults to number of CPUs (%(default)s).",
         default=os.cpu_count() or 1,
     )
-    parser.add_argument(
-        "-v", "--verbose", action="store_true", help="Enable verbose output."
-    )
+    parser.add_argument("-v", "--verbose", action="store_true", help="Enable verbose output.")
     parser.add_argument(
         "-r",
         "--repository",
@@ -592,15 +535,12 @@ def main() -> None:
         cmdline_args.output_dir.mkdir(parents=True, exist_ok=True)
     except FileExistsError:
         reporter.fatal(
-            f"The output path exists but is not a directory.\n\nPath: {cmdline_args.output_dir}",
-            title="Output Error",
+            f"The output path exists but is not a directory.\n\nPath: {cmdline_args.output_dir}", title="Output Error"
         )
         sys.exit(1)
 
     # Create the process dispatcher.
-    executor = Executor(
-        reporter, repository, cmdline_args.dry_run, cmdline_args.parallel
-    )
+    executor = Executor(reporter, repository, cmdline_args.dry_run, cmdline_args.parallel)
 
     # Build the firmwares and copy them to the ouptut directory.
     build(
@@ -615,9 +555,7 @@ def main() -> None:
     )
 
     # Copy assets.
-    copy_assets_to_output_dir(
-        executor, reporter, cmdline_args.output_dir, cmdline_args.repository
-    )
+    copy_assets_to_output_dir(executor, reporter, cmdline_args.output_dir, cmdline_args.repository)
 
 
 if __name__ == "__main__":
