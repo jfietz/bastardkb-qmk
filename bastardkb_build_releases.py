@@ -348,15 +348,24 @@ def total_firmware_count_reduce_callback(acc: int, firmware_list: FirmwareList) 
     return acc + len(firmware_list.configurations)
 
 
+# Compiled regex to avoid recompilation on every call. Matches the firmware filename copy log line.
+FIRMWARE_COPY_PATTERN = re.compile(r"Copying (?P<filename>.+) to qmk_firmware folder")
+
+
 def read_firmware_filename_from_logs(firmware: Firmware, log_file: Path) -> Path:
-    pattern = re.compile(
-        f"Copying (?P<filename>{re.escape(firmware.output_filename)}\\.[a-z0-9]+) to qmk_firmware folder"
-    )
+    expected_prefix = firmware.output_filename
     with log_file.open() as fd:
         for line in fd:
-            match = pattern.match(line)
+            match = FIRMWARE_COPY_PATTERN.match(line)
             if match:
-                return Path(match.group("filename"))
+                filename = match.group("filename")
+                if filename.startswith(expected_prefix):
+                    suffix = filename[len(expected_prefix) :]
+                    if suffix.startswith(".") and len(suffix) > 1:
+                        # Check extension is alphanumeric (lowercase)
+                        extension = suffix[1:]
+                        if extension.isalnum() and (extension.islower() or extension.isdigit()):
+                            return Path(filename)
     raise FileNotFoundError()
 
 
