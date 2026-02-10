@@ -1,8 +1,23 @@
+import unittest
 import sys
 import os
-import unittest
-from unittest.mock import MagicMock
+import tempfile
+from unittest.mock import MagicMock, patch
 from pathlib import Path
+
+# Mock dependencies if not already mocked
+if "pygit2" not in sys.modules or not isinstance(sys.modules["pygit2"], MagicMock):
+    sys.modules["pygit2"] = MagicMock()
+
+if "rich" not in sys.modules or not isinstance(sys.modules["rich"], MagicMock):
+    sys.modules["rich"] = MagicMock()
+    sys.modules["rich.console"] = MagicMock()
+    sys.modules["rich.live"] = MagicMock()
+    sys.modules["rich.panel"] = MagicMock()
+    # Mock Panel class specifically since it might be used with isinstance
+    sys.modules["rich.panel"].Panel = MagicMock
+    sys.modules["rich.progress"] = MagicMock()
+    sys.modules["rich.text"] = MagicMock()
 
 # Add root to sys.path
 sys.path.append(os.path.abspath(os.path.join(os.path.dirname(__file__), "..")))
@@ -11,62 +26,89 @@ import bastardkb_build_releases as bkb
 
 
 class TestPerformance(unittest.TestCase):
-    def setUp(self):
-        self.reporter = MagicMock()
-        self.repository = MagicMock()
-        self.parallel = 4
-        self.executor = bkb.Executor(
-            self.reporter, self.repository, dry_run=False, parallel=self.parallel
+    def test_git_submodule_update_uses_jobs(self):
+        """Verify git submodule update uses --jobs argument."""
+        # Setup mocks
+        reporter = MagicMock()
+        repository = MagicMock()
+        parallel_jobs = 4
+
+        # We need to ensure we can instantiate Executor even with mocks
+        executor = bkb.Executor(
+            reporter, repository, dry_run=False, parallel=parallel_jobs
         )
 
-    def test_git_submodule_update_uses_jobs(self):
-        """Verify that git submodule update uses the --jobs parameter for parallel execution."""
         # Mock worktree lookup
         worktree = MagicMock()
         worktree.name = "test_branch"
         worktree.path = Path("/tmp/test_worktree")
-        self.repository.lookup_worktree.return_value = worktree
+        repository.lookup_worktree.return_value = worktree
 
-        # Mock _run to simulate successful git execution
-        # We need to mock _run because it calls subprocess.run which we don't want to actually execute
-        self.executor._run = MagicMock()
+        # Mock _run
+        executor._run = MagicMock()
         success_process = MagicMock()
         success_process.returncode = 0
-        self.executor._run.return_value = success_process
+        executor._run.return_value = success_process
 
-        # Run git_ensure_worktree
-        self.executor.git_ensure_worktree("test_branch", update_submodules=True)
+        # Run the method
+        executor.git_ensure_worktree("test_branch", update_submodules=True)
 
-        # Verify _run was called with git submodule update and --jobs
-        # The arguments are passed as a tuple/list to _run
+        # Verify _run was called
+        # We need to find the call that matches submodule update
         found = False
-        # Retrieve all calls to _run
-        calls = self.executor._run.call_args_list
+        git_submodule_call_args = None
 
-        for call in calls:
-            # call.args[0] is the command list/tuple
-            args = call.args[0]
-            # Check if this is the submodule update command
+        for call in executor._run.call_args_list:
+            args = call[0][0]  # The first argument is the command tuple/list
             if len(args) >= 3 and args[:3] == ("git", "submodule", "update"):
-                # Check for --jobs argument
+                git_submodule_call_args = args
                 if "--jobs" in args:
+                    # Check if the number of jobs follows --jobs
                     try:
                         jobs_index = args.index("--jobs")
-                        jobs_val = args[jobs_index + 1]
-                        if str(jobs_val) == str(self.parallel):
+                        if str(parallel_jobs) == args[jobs_index + 1]:
                             found = True
-                    except IndexError:
+                    except (ValueError, IndexError):
                         pass
                 break
 
-        # We expect this to FAIL initially because the code doesn't use --jobs yet
-        if not found:
-            # Try to print debug info if possible (though captured stdout might hide it)
-            pass
-
         self.assertTrue(
-            found, f"git submodule update was not called with --jobs {self.parallel}."
+            found,
+            f"git submodule update was not called with --jobs {parallel_jobs}. Called with: {git_submodule_call_args}",
         )
+
+    def test_total_firmware_count_reduce_callback_efficiency(self):
+        """Verify reduce callback works correctly (doesn't crash) without explicit list conversion."""
+        # Mock FirmwareList
+        FirmwareList = MagicMock()
+        firmware_list = MagicMock()
+        # Mock configurations as a sequence (tuple)
+        firmware_list.configurations = (1, 2, 3)
+
+        acc = 0
+        # Call the function directly
+        result = bkb.total_firmware_count_reduce_callback(acc, firmware_list)
+        self.assertEqual(result, 3)
+
+    def test_read_firmware_filename_regex(self):
+        """Verify firmware filename extraction regex works correctly."""
+        # Mock Firmware
+        firmware = MagicMock()
+        firmware.output_filename = "bastardkb_skeletyl_default"
+
+        # Create a temp file with log content
+        with tempfile.NamedTemporaryFile(mode="w", delete=False) as tmp:
+            tmp.write("Some log line\n")
+            tmp.write("Copying bastardkb_skeletyl_default.hex to qmk_firmware folder\n")
+            tmp.write("Another log line\n")
+            tmp_path = Path(tmp.name)
+
+        try:
+            result = bkb.read_firmware_filename_from_logs(firmware, tmp_path)
+            self.assertEqual(str(result), "bastardkb_skeletyl_default.hex")
+        finally:
+            if os.path.exists(tmp_path):
+                os.unlink(tmp_path)
 
 
 if __name__ == "__main__":
