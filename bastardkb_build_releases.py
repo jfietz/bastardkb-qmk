@@ -288,7 +288,7 @@ class Executor(object):
                 )
                 # TODO: use pygit2 to update submodules.
                 completed_process = self._run(
-                    ("git", "submodule", "update", "--init", "--recursive", "--jobs", str(self.parallel)),
+                    ("git", "submodule", "update", "--init", "--recursive"),
                     log_file=self.reporter.log_file(f"git-submodule-update-{worktree.name}"),
                     cwd=worktree.path,
                 )
@@ -337,7 +337,7 @@ class Executor(object):
 
 
 def total_firmware_count_reduce_callback(acc: int, firmware_list: FirmwareList) -> int:
-    return acc + len(list(firmware_list.configurations))
+    return acc + len(firmware_list.configurations)
 
 
 def read_firmware_filename_from_logs(firmware: Firmware, log_file: Path) -> Path:
