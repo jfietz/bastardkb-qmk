@@ -4,37 +4,11 @@ import os
 import subprocess
 import re
 from unittest.mock import MagicMock, patch
-from importlib import reload
-
-# Define MockPanel before using it in mocks
-class MockPanel:
-    def __init__(self, renderable, title="", **kwargs):
-        self.renderable = renderable
-        self.title = title
-        self.__dict__.update(kwargs)
-
-# Mock dependencies if not already mocked or if they are mocks (to update them)
-if "pygit2" not in sys.modules or not isinstance(sys.modules["pygit2"], MagicMock):
-    sys.modules["pygit2"] = MagicMock()
-
-# Ensure rich mocks are set up
-if "rich" not in sys.modules or not isinstance(sys.modules["rich"], MagicMock):
-    sys.modules["rich"] = MagicMock()
-    sys.modules["rich.console"] = MagicMock()
-    sys.modules["rich.live"] = MagicMock()
-    sys.modules["rich.panel"] = MagicMock()
-    sys.modules["rich.progress"] = MagicMock()
-    sys.modules["rich.text"] = MagicMock()
-
-# Force Panel to be MockPanel class, even if previously mocked
-sys.modules["rich.panel"].Panel = MockPanel
 
 # Add root to sys.path
 sys.path.append(os.path.abspath(os.path.join(os.path.dirname(__file__), '..')))
 
 import bastardkb_build_releases as bkb
-# Reload bkb to ensure it picks up the MockPanel
-reload(bkb)
 
 class TestUX(unittest.TestCase):
     def test_parallel_default_help(self):
@@ -45,11 +19,6 @@ class TestUX(unittest.TestCase):
             capture_output=True,
             text=True
         )
-
-        # If running in restricted environment where imports fail, skip test
-        if result.returncode != 0 and "ModuleNotFoundError" in result.stderr:
-             self.skipTest("Skipping test because dependencies are missing in this environment")
-
         self.assertEqual(result.returncode, 0)
 
         # We expect the help output to show the default value matching the CPU count
