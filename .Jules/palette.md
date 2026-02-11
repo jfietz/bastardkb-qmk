@@ -5,3 +5,7 @@
 ## 2024-05-24 - [Smart Defaults in CLI]
 **Learning:** Build tools that default to single-threaded execution on modern hardware create a sluggish first impression. Auto-detecting resources (like `os.cpu_count()`) respects the user's hardware and time, making the tool feel "smart" out of the box.
 **Action:** Inspect CLI default arguments for performance bottlenecks and replace static defaults with dynamic, environment-aware values where safe.
+
+## 2024-05-27 - [Dependency Pre-flight Checks]
+**Learning:** CLI tools that rely on external binaries (like `git`, `qmk`) often fail with cryptic tracebacks deep in execution when these are missing. Adding explicit, early checks for these dependencies prevents user confusion and saves time.
+**Action:** Always check for critical external dependencies at the start of a CLI tool's execution and provide clear instructions if they are missing.

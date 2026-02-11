@@ -510,6 +510,15 @@ def main() -> None:
     cmdline_args = parser.parse_args()
     reporter = Reporter(cmdline_args.verbose)
 
+    # Check for external dependencies.
+    if shutil.which("git") is None:
+        reporter.fatal("git is not installed or not in the PATH.", title="Dependency Error")
+        sys.exit(1)
+
+    if shutil.which("qmk") is None:
+        reporter.fatal("qmk is not installed or not in the PATH.", title="Dependency Error")
+        sys.exit(1)
+
     # Install SIGINT handler.
     signal.signal(signal.SIGINT, partial(sigint_handler, reporter))
 
