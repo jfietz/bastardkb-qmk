@@ -469,6 +469,21 @@ def sigint_handler(reporter: Reporter, signal, frame):
     sys.exit(1)
 
 
+def check_dependencies(reporter: Reporter) -> None:
+    dependencies = ("git", "qmk")
+    missing = []
+    for dep in dependencies:
+        if shutil.which(dep) is None:
+            missing.append(dep)
+
+    if missing:
+        reporter.fatal(
+            f"The following required dependencies are missing: {', '.join(missing)}\n\nPlease install them and ensure they are in your PATH.",
+            title="Missing Dependencies",
+        )
+        sys.exit(1)
+
+
 def main() -> None:
     # Parse command line arguments.
     parser = argparse.ArgumentParser(description="Create Bastard Keyboard firmware release.")
@@ -509,6 +524,9 @@ def main() -> None:
     )
     cmdline_args = parser.parse_args()
     reporter = Reporter(cmdline_args.verbose)
+
+    # Check for external dependencies.
+    check_dependencies(reporter)
 
     # Install SIGINT handler.
     signal.signal(signal.SIGINT, partial(sigint_handler, reporter))
