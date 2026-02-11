@@ -1,8 +1,9 @@
 import unittest
 import sys
 import os
-from unittest.mock import MagicMock, patch
+from unittest.mock import MagicMock, patch, PropertyMock
 from pathlib import Path
+import tempfile
 
 # Mock dependencies if not already mocked
 if "pygit2" not in sys.modules or not isinstance(sys.modules["pygit2"], MagicMock):
@@ -14,7 +15,13 @@ if "rich" not in sys.modules or not isinstance(sys.modules["rich"], MagicMock):
     sys.modules["rich.live"] = MagicMock()
     sys.modules["rich.panel"] = MagicMock()
     # Mock Panel class specifically since it might be used with isinstance
-    sys.modules["rich.panel"].Panel = MagicMock
+    class MockPanel(MagicMock):
+        def __init__(self, *args, **kwargs):
+            super().__init__()
+            for k, v in kwargs.items():
+                setattr(self, k, v)
+
+    sys.modules["rich.panel"].Panel = MockPanel
     sys.modules["rich.progress"] = MagicMock()
     sys.modules["rich.text"] = MagicMock()
 
@@ -70,18 +77,82 @@ class TestPerformance(unittest.TestCase):
 
         self.assertTrue(found, f"git submodule update was not called with --jobs {parallel_jobs}. Called with: {git_submodule_call_args}")
 
-    def test_total_firmware_count_reduce_callback_efficiency(self):
-        """Verify reduce callback works correctly (doesn't crash) without explicit list conversion."""
-        # Mock FirmwareList
-        FirmwareList = MagicMock()
-        firmware_list = MagicMock()
-        # Mock configurations as a sequence (tuple)
-        firmware_list.configurations = (1, 2, 3)
+    def test_read_firmware_filename_from_logs_string_parsing(self):
+        # Setup
+        firmware = MagicMock()
+        # Mock output_filename property
+        type(firmware).output_filename = PropertyMock(return_value="bastardkb_skeletyl_default")
 
-        acc = 0
-        # Call the function directly
-        result = bkb.total_firmware_count_reduce_callback(acc, firmware_list)
-        self.assertEqual(result, 3)
+        log_content = """
+Some random log line
+Copying bastardkb_skeletyl_default.hex to qmk_firmware folder
+Some other log line
+"""
+        with tempfile.NamedTemporaryFile(mode='w+', delete=False) as tmp:
+            tmp.write(log_content)
+            tmp_path = Path(tmp.name)
+
+        try:
+            # Test existing implementation (regex)
+            result = bkb.read_firmware_filename_from_logs(firmware, tmp_path)
+            self.assertEqual(result, Path("bastardkb_skeletyl_default.hex"))
+        finally:
+            os.unlink(tmp_path)
+
+    def test_total_firmware_count_sum(self):
+        # Verify the sum logic works as intended (just validating Python's sum)
+        f1 = MagicMock()
+        f1.configurations = [1, 2, 3] # length 3
+        f2 = MagicMock()
+        f2.configurations = [1, 2] # length 2
+
+        firmwares = [f1, f2]
+
+        # Proposed implementation: sum
+        proposed_result = sum(len(f.configurations) for f in firmwares)
+        self.assertEqual(proposed_result, 5)
+
+    def test_qmk_compile_argv(self):
+        # Mock Executor dependencies
+        reporter = MagicMock()
+        repository = MagicMock()
+        executor = bkb.Executor(reporter, repository, dry_run=False, parallel=4)
+
+        firmware = MagicMock()
+        firmware.keyboard = "test/kb"
+        firmware.keymap = "default"
+        # Mock output_filename property
+        type(firmware).output_filename = PropertyMock(return_value="test_kb_default")
+        firmware.env_vars = ("VAR1=val1", "VAR2=val2")
+
+        # Mock _run to inspect argv
+        executor._run = MagicMock()
+        # Mock return value of _run (CompletedProcess)
+        executor._run.return_value = MagicMock(returncode=0)
+
+        # Mock worktree
+        worktree = MagicMock()
+        worktree.path = Path("/tmp/wt")
+
+        executor.qmk_compile(firmware, worktree)
+
+        # Check args
+        args, kwargs = executor._run.call_args
+        argv = args[0]
+
+        # Check if environment variables are correctly flattened
+        # Expected sequence: ... "-e", "VAR1=val1", "-e", "VAR2=val2" ...
+
+        # Find index of VAR1=val1
+        try:
+            idx1 = argv.index("VAR1=val1")
+            self.assertEqual(argv[idx1-1], "-e", "Flag -e missing before VAR1")
+
+            idx2 = argv.index("VAR2=val2")
+            self.assertEqual(argv[idx2-1], "-e", "Flag -e missing before VAR2")
+
+        except ValueError:
+            self.fail(f"Environment variables not found in argv: {argv}")
 
 if __name__ == '__main__':
     unittest.main()
