@@ -13,9 +13,9 @@ import sys
 import tempfile
 
 from collections.abc import Callable, Sequence
-from functools import partial, reduce
+from functools import partial
+from itertools import chain
 from logging.handlers import RotatingFileHandler
-from operator import iconcat
 from pathlib import Path, PurePath
 from pygit2 import (
     GitError,
@@ -323,7 +323,7 @@ class Executor(object):
             f"TARGET={firmware.output_filename}",
             "--env",
             "USE_CCACHE=yes",
-            *reduce(iconcat, (("-e", env_var) for env_var in firmware.env_vars), []),
+            *chain.from_iterable(("-e", env_var) for env_var in firmware.env_vars),
         )
         log_file = self.reporter.log_file(f"qmk-compile-{firmware.output_filename}")
         return QmkCompletedProcess(self._run(argv, log_file=log_file, cwd=worktree.path), log_file)
@@ -344,19 +344,20 @@ class Executor(object):
         return subprocess.CompletedProcess(args=argv, returncode=0)
 
 
-def total_firmware_count_reduce_callback(acc: int, firmware_list: FirmwareList) -> int:
-    return acc + len(firmware_list.configurations)
+FIRMWARE_COPY_PATTERN = re.compile(r"Copying (?P<filename>.*?) to qmk_firmware folder")
 
 
 def read_firmware_filename_from_logs(firmware: Firmware, log_file: Path) -> Path:
-    pattern = re.compile(
-        f"Copying (?P<filename>{re.escape(firmware.output_filename)}\\.[a-z0-9]+) to qmk_firmware folder"
-    )
+    expected_prefix = firmware.output_filename
     with log_file.open() as fd:
         for line in fd:
-            match = pattern.match(line)
+            match = FIRMWARE_COPY_PATTERN.match(line)
             if match:
-                return Path(match.group("filename"))
+                filename = match.group("filename")
+                if filename.startswith(expected_prefix):
+                    remainder = filename[len(expected_prefix) :]
+                    if len(remainder) > 1 and remainder.startswith(".") and remainder[1:].isalnum():
+                        return Path(filename)
     raise FileNotFoundError()
 
 
@@ -392,7 +393,7 @@ def build(
     )
     progress_group = Group(empty_status, overall_status, overall_progress)
 
-    total_firmware_count = reduce(total_firmware_count_reduce_callback, firmwares, 0)
+    total_firmware_count = sum(len(firmware_list.configurations) for firmware_list in firmwares)
     built_firmware_count = 0
     newline_task = empty_status.add_task("")
     overall_status_task = overall_status.add_task("Preparing…")
