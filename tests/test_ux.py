@@ -8,6 +8,24 @@ from unittest.mock import MagicMock, patch
 # Add root to sys.path
 sys.path.append(os.path.abspath(os.path.join(os.path.dirname(__file__), '..')))
 
+# Mock dependencies
+sys.modules['pygit2'] = MagicMock()
+sys.modules['rich'] = MagicMock()
+sys.modules['rich.console'] = MagicMock()
+sys.modules['rich.live'] = MagicMock()
+sys.modules['rich.panel'] = MagicMock()
+# Mock Panel specifically to avoid InvalidSpecError when initialized with a Mock object
+class MockPanel:
+    def __init__(self, *args, **kwargs):
+        self.args = args
+        self.kwargs = kwargs
+        if 'title' in kwargs:
+             self.title = kwargs['title']
+
+sys.modules['rich.panel'].Panel = MockPanel
+sys.modules['rich.progress'] = MagicMock()
+sys.modules['rich.text'] = MagicMock()
+
 import bastardkb_build_releases as bkb
 
 class TestUX(unittest.TestCase):

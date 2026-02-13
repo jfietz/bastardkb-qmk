@@ -178,8 +178,17 @@ class Reporter(object):
         self.verbose = verbose
 
         # Logging setup.
+        xdg_state_home = os.environ.get("XDG_STATE_HOME", os.path.expanduser("~/.local/state"))
+        log_dir = os.path.join(xdg_state_home, "bastardkb-qmk")
+        os.makedirs(log_dir, mode=0o700, exist_ok=True)
+        log_file = os.path.join(log_dir, f"{os.path.basename(__file__)}.log")
+
+        if not os.path.exists(log_file):
+            open(log_file, "a").close()
+            os.chmod(log_file, 0o600)
+
         logging_file_handler = RotatingFileHandler(
-            filename=os.path.join(os.getcwd(), f"{os.path.basename(__file__)}.log"),
+            filename=log_file,
             encoding="utf-8",
             maxBytes=1024 * 1024,
             backupCount=5,
@@ -469,6 +478,14 @@ def sigint_handler(reporter: Reporter, signal, frame):
     sys.exit(1)
 
 
+def check_dependencies() -> None:
+    dependencies = ["git", "qmk"]
+    missing = [dep for dep in dependencies if not shutil.which(dep)]
+    if missing:
+        print(f"Error: Missing required dependencies: {', '.join(missing)}", file=sys.stderr)
+        sys.exit(1)
+
+
 def main() -> None:
     # Parse command line arguments.
     parser = argparse.ArgumentParser(description="Create Bastard Keyboard firmware release.")
@@ -508,6 +525,9 @@ def main() -> None:
         default=".*",
     )
     cmdline_args = parser.parse_args()
+
+    check_dependencies()
+
     reporter = Reporter(cmdline_args.verbose)
 
     # Install SIGINT handler.
