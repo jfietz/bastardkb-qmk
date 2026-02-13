@@ -513,6 +513,15 @@ def main() -> None:
     # Install SIGINT handler.
     signal.signal(signal.SIGINT, partial(sigint_handler, reporter))
 
+    # Check for external dependencies
+    for command in ["git", "qmk"]:
+        if not shutil.which(command):
+            reporter.fatal(
+                f"Command not found: {command}\n\nPlease install {command} and ensure it is in your PATH.",
+                title="Missing Dependency",
+            )
+            sys.exit(1)
+
     # Open QMK repository.
     try:
         repository = Repository(cmdline_args.repository)

@@ -5,3 +5,7 @@
 ## 2024-05-24 - [Smart Defaults in CLI]
 **Learning:** Build tools that default to single-threaded execution on modern hardware create a sluggish first impression. Auto-detecting resources (like `os.cpu_count()`) respects the user's hardware and time, making the tool feel "smart" out of the box.
 **Action:** Inspect CLI default arguments for performance bottlenecks and replace static defaults with dynamic, environment-aware values where safe.
+
+## 2025-05-18 - [CLI Dependency Validation]
+**Learning:** Users often assume dependencies (like `qmk` or `git`) are installed, leading to obscure `FileNotFoundError` tracebacks.
+**Action:** Always validate external command availability using `shutil.which` at the start of a CLI script, providing actionable instructions (e.g., "Please install X") instead of crashing.
