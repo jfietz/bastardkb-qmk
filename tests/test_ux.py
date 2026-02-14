@@ -5,14 +5,48 @@ import subprocess
 import re
 from unittest.mock import MagicMock, patch
 
+# Mock dependencies if not already mocked
+if "pygit2" not in sys.modules or not isinstance(sys.modules["pygit2"], MagicMock):
+    sys.modules["pygit2"] = MagicMock()
+
+if "rich" not in sys.modules or not isinstance(sys.modules["rich"], MagicMock):
+    sys.modules["rich"] = MagicMock()
+    sys.modules["rich.console"] = MagicMock()
+    sys.modules["rich.live"] = MagicMock()
+    sys.modules["rich.panel"] = MagicMock()
+    # Mock Panel class specifically since it might be used with isinstance
+    sys.modules["rich.panel"].Panel = MagicMock
+    sys.modules["rich.progress"] = MagicMock()
+    sys.modules["rich.text"] = MagicMock()
+
 # Add root to sys.path
 sys.path.append(os.path.abspath(os.path.join(os.path.dirname(__file__), '..')))
 
 import bastardkb_build_releases as bkb
 
 class TestUX(unittest.TestCase):
+    def setUp(self):
+        # Patch dependencies that interact with the filesystem
+        self.mock_handler = patch('bastardkb_build_releases.RotatingFileHandler').start()
+        # Ensure the mock handler has a level attribute
+        self.mock_handler.return_value.level = 0
+
+        self.mock_mkdir = patch('pathlib.Path.mkdir').start()
+        self.mock_chmod = patch('os.chmod').start()
+        self.mock_touch = patch('pathlib.Path.touch').start()
+        self.mock_mkdtemp = patch('tempfile.mkdtemp', return_value='/tmp/mock_log_dir').start()
+
+    def tearDown(self):
+        patch.stopall()
+
     def test_parallel_default_help(self):
         """Verify the help text shows the correct default for parallel."""
+        # check if dependencies are installed in the environment for subprocess
+        try:
+            subprocess.check_call([sys.executable, "-c", "import rich; import pygit2"], stdout=subprocess.DEVNULL, stderr=subprocess.DEVNULL)
+        except subprocess.CalledProcessError:
+            self.skipTest("Dependencies (rich, pygit2) missing, skipping integration test")
+
         cpu_count = os.cpu_count() or 1
         result = subprocess.run(
             [sys.executable, "bastardkb_build_releases.py", "--help"],
@@ -44,21 +78,20 @@ class TestUX(unittest.TestCase):
             self.skipTest("print_summary not implemented yet")
 
         # Test Success Case
-        reporter.print_summary(10, 10)
-        # Check if console.print was called with a Panel
-        self.assertTrue(reporter.console.print.called)
-        args, _ = reporter.console.print.call_args
-        self.assertTrue(len(args) > 0)
-        from rich.panel import Panel
-        self.assertIsInstance(args[0], Panel)
-        # Note: rich markup might be in the title, e.g. [bold green]Success[/bold green]
-        self.assertIn("Success", args[0].title)
+        with patch('bastardkb_build_releases.Panel') as MockPanel:
+            reporter.print_summary(10, 10)
+            self.assertTrue(MockPanel.called)
+            # Verify Panel was initialized with expected title
+            kwargs = MockPanel.call_args[1]
+            self.assertIn("Success", kwargs.get('title', ''))
 
         # Test Failure Case
-        reporter.print_summary(8, 10)
-        args, _ = reporter.console.print.call_args
-        self.assertIsInstance(args[0], Panel)
-        self.assertIn("Build Completed with Errors", args[0].title)
+        with patch('bastardkb_build_releases.Panel') as MockPanel:
+            reporter.print_summary(8, 10)
+            self.assertTrue(MockPanel.called)
+            # Verify Panel was initialized with expected title
+            kwargs = MockPanel.call_args[1]
+            self.assertIn("Build Completed with Errors", kwargs.get('title', ''))
 
 if __name__ == '__main__':
     unittest.main()
