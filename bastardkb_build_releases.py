@@ -230,17 +230,27 @@ class Reporter(object):
         )
         self.logging.error(f"{title}: {message}")
 
-    def print_summary(self, success_count: int, total_count: int) -> None:
+    def print_summary(self, success_count: int, total_count: int, is_dry_run: bool = False) -> None:
         failed_count = total_count - success_count
         if failed_count == 0:
-            self.console.print(
-                Panel(
-                    Text("All firmwares built successfully! 🎉", justify="center", style="bold green"),
-                    title="[bold green]Success[/bold green]",
-                    border_style="green",
-                    padding=(1, 2),
+            if is_dry_run:
+                self.console.print(
+                    Panel(
+                        Text("Dry run completed successfully! 🧪", justify="center", style="bold blue"),
+                        title="[bold blue]Dry Run Successful[/bold blue]",
+                        border_style="blue",
+                        padding=(1, 2),
+                    )
                 )
-            )
+            else:
+                self.console.print(
+                    Panel(
+                        Text("All firmwares built successfully! 🎉", justify="center", style="bold green"),
+                        title="[bold green]Success[/bold green]",
+                        border_style="green",
+                        padding=(1, 2),
+                    )
+                )
         else:
             self.console.print(
                 Panel(
@@ -398,7 +408,8 @@ def build(
     overall_status_task = overall_status.add_task("Preparing…")
     overall_progress_task = overall_progress.add_task("", total=total_firmware_count)
     reporter.set_progress_status(lambda message: overall_status.update(overall_status_task, description=message))
-    reporter.info(f"Preparing to build {total_firmware_count} BastardKB firmwares")
+    action = "simulate building" if executor.dry_run else "build"
+    reporter.info(f"Preparing to {action} {total_firmware_count} BastardKB firmwares")
     with Live(progress_group, console=reporter.console):
         for branch, configurations in firmwares:
             # Checkout branch.
@@ -424,7 +435,7 @@ def build(
             reporter.newline()
         overall_status.update(overall_status_task, visible=False)
         empty_status.update(newline_task, visible=False)
-        reporter.print_summary(built_firmware_count, total_firmware_count)
+        reporter.print_summary(built_firmware_count, total_firmware_count, is_dry_run=executor.dry_run)
 
 
 def copy_firmware_to_output_dir(reporter: Reporter, output_dir: Path, firmware_path: Path):
