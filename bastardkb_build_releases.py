@@ -90,6 +90,10 @@ ALL_MCUS: Sequence[str] = (
     *ARM_MCUS,
 )
 
+# Pre-compile regex to improve performance when parsing logs for multiple firmwares.
+FIRMWARE_COPY_PATTERN = re.compile(r"Copying (?P<filename>.*?) to qmk_firmware folder")
+
+
 ALL_FIRMWARES: Sequence[FirmwareList] = (
     # All firmwares built on the `bkb-master` branch, ie. the branch tracking
     # `qmk/qmk_firmware:master`.
@@ -349,14 +353,13 @@ def total_firmware_count_reduce_callback(acc: int, firmware_list: FirmwareList) 
 
 
 def read_firmware_filename_from_logs(firmware: Firmware, log_file: Path) -> Path:
-    pattern = re.compile(
-        f"Copying (?P<filename>{re.escape(firmware.output_filename)}\\.[a-z0-9]+) to qmk_firmware folder"
-    )
     with log_file.open() as fd:
         for line in fd:
-            match = pattern.match(line)
+            match = FIRMWARE_COPY_PATTERN.match(line)
             if match:
-                return Path(match.group("filename"))
+                path = Path(match.group("filename"))
+                if path.stem == firmware.output_filename:
+                    return path
     raise FileNotFoundError()
 
 
