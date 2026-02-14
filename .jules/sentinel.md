@@ -2,3 +2,8 @@
 **Vulnerability:** Ignored return code from `git submodule update` in build script.
 **Learning:** Build scripts often assume happy paths for external commands. Failing to check return codes can lead to builds proceeding with incomplete or outdated dependencies (integrity loss).
 **Prevention:** Always check return codes of subprocess calls, especially for critical setup steps like dependency fetching.
+
+## 2026-01-25 - Secure Log Storage
+**Vulnerability:** Application logs stored in default location (cwd) with default permissions.
+**Learning:** Default logging configurations often expose sensitive environment details in shared environments.
+**Prevention:** Explicitly set 0o700/0o600 permissions on log directories and files, and use XDG_STATE_HOME.

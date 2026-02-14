@@ -171,6 +171,15 @@ ALL_FIRMWARES: Sequence[FirmwareList] = (
 )
 
 
+def get_state_dir() -> Path:
+    xdg_state_home = os.environ.get("XDG_STATE_HOME")
+    if xdg_state_home:
+        state_dir = Path(xdg_state_home)
+    else:
+        state_dir = Path.home() / ".local" / "state"
+    return state_dir / "bastardkb-qmk"
+
+
 class Reporter(object):
     def __init__(self, verbose: bool):
         self.console = Console()
@@ -178,8 +187,18 @@ class Reporter(object):
         self.verbose = verbose
 
         # Logging setup.
+        state_dir = get_state_dir()
+        state_dir.mkdir(parents=True, exist_ok=True)
+        os.chmod(state_dir, 0o700)
+
+        log_file = state_dir / f"{os.path.basename(__file__)}.log"
+        if not log_file.exists():
+            log_file.touch(mode=0o600)
+        else:
+            os.chmod(log_file, 0o600)
+
         logging_file_handler = RotatingFileHandler(
-            filename=os.path.join(os.getcwd(), f"{os.path.basename(__file__)}.log"),
+            filename=log_file,
             encoding="utf-8",
             maxBytes=1024 * 1024,
             backupCount=5,
