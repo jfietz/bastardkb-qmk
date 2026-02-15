@@ -8,6 +8,28 @@ from unittest.mock import MagicMock, patch
 # Add root to sys.path
 sys.path.append(os.path.abspath(os.path.join(os.path.dirname(__file__), '..')))
 
+class MockPanel(MagicMock):
+    def __init__(self, *args, **kwargs):
+        # Avoid passing positional args to super init if they are not meant as spec
+        super().__init__()
+        # If there are kwargs, we can set attributes or pass them if MagicMock supports them?
+        # MagicMock __init__ supports **kwargs to configure the mock.
+        self.configure_mock(**kwargs)
+
+# Mock dependencies if not already mocked
+if "pygit2" not in sys.modules or not isinstance(sys.modules["pygit2"], MagicMock):
+    sys.modules["pygit2"] = MagicMock()
+
+if "rich" not in sys.modules or not isinstance(sys.modules["rich"], MagicMock):
+    sys.modules["rich"] = MagicMock()
+    sys.modules["rich.console"] = MagicMock()
+    sys.modules["rich.live"] = MagicMock()
+    sys.modules["rich.panel"] = MagicMock()
+    # Mock Panel class specifically since it might be used with isinstance
+    sys.modules["rich.panel"].Panel = MockPanel
+    sys.modules["rich.progress"] = MagicMock()
+    sys.modules["rich.text"] = MagicMock()
+
 import bastardkb_build_releases as bkb
 
 class TestUX(unittest.TestCase):

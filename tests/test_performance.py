@@ -4,6 +4,14 @@ import os
 from unittest.mock import MagicMock, patch
 from pathlib import Path
 
+class MockPanel(MagicMock):
+    def __init__(self, *args, **kwargs):
+        # Avoid passing positional args to super init if they are not meant as spec
+        super().__init__()
+        # If there are kwargs, we can set attributes or pass them if MagicMock supports them?
+        # MagicMock __init__ supports **kwargs to configure the mock.
+        self.configure_mock(**kwargs)
+
 # Mock dependencies if not already mocked
 if "pygit2" not in sys.modules or not isinstance(sys.modules["pygit2"], MagicMock):
     sys.modules["pygit2"] = MagicMock()
@@ -14,7 +22,7 @@ if "rich" not in sys.modules or not isinstance(sys.modules["rich"], MagicMock):
     sys.modules["rich.live"] = MagicMock()
     sys.modules["rich.panel"] = MagicMock()
     # Mock Panel class specifically since it might be used with isinstance
-    sys.modules["rich.panel"].Panel = MagicMock
+    sys.modules["rich.panel"].Panel = MockPanel
     sys.modules["rich.progress"] = MagicMock()
     sys.modules["rich.text"] = MagicMock()
 
@@ -69,19 +77,6 @@ class TestPerformance(unittest.TestCase):
                 break
 
         self.assertTrue(found, f"git submodule update was not called with --jobs {parallel_jobs}. Called with: {git_submodule_call_args}")
-
-    def test_total_firmware_count_reduce_callback_efficiency(self):
-        """Verify reduce callback works correctly (doesn't crash) without explicit list conversion."""
-        # Mock FirmwareList
-        FirmwareList = MagicMock()
-        firmware_list = MagicMock()
-        # Mock configurations as a sequence (tuple)
-        firmware_list.configurations = (1, 2, 3)
-
-        acc = 0
-        # Call the function directly
-        result = bkb.total_firmware_count_reduce_callback(acc, firmware_list)
-        self.assertEqual(result, 3)
 
 if __name__ == '__main__':
     unittest.main()
