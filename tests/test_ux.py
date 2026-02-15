@@ -60,5 +60,29 @@ class TestUX(unittest.TestCase):
         self.assertIsInstance(args[0], Panel)
         self.assertIn("Build Completed with Errors", args[0].title)
 
+    def test_print_summary_content(self):
+        """Verify print_summary content includes success rate and log path."""
+        reporter = bkb.Reporter(verbose=False)
+        reporter.console = MagicMock()
+        reporter.logging = MagicMock()
+
+        # Test Success Case
+        reporter.print_summary(10, 10)
+        args, _ = reporter.console.print.call_args
+        panel = args[0]
+        # Check if renderable is a Text object and check its content
+        self.assertTrue(hasattr(panel.renderable, "plain"))
+        self.assertIn("100.0% success rate", panel.renderable.plain)
+
+        # Test Failure Case
+        reporter.print_summary(8, 10)
+        args, _ = reporter.console.print.call_args
+        panel = args[0]
+        # Text object has a 'plain' property that returns the unstyled text
+        self.assertTrue(hasattr(panel.renderable, "plain"))
+        self.assertIn("80.0%", panel.renderable.plain)
+        # Verify log directory is present
+        self.assertIn(reporter.log_dir, panel.renderable.plain)
+
 if __name__ == '__main__':
     unittest.main()
