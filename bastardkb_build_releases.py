@@ -172,14 +172,37 @@ ALL_FIRMWARES: Sequence[FirmwareList] = (
 
 
 class Reporter(object):
+    def get_state_dir(self) -> Path:
+        """Get the state directory for the application, following XDG Base Directory spec."""
+        xdg_state_home = os.environ.get("XDG_STATE_HOME")
+        if xdg_state_home:
+            state_dir = Path(xdg_state_home)
+        else:
+            state_dir = Path.home() / ".local" / "state"
+
+        app_state_dir = state_dir / "bastardkb-qmk"
+        return app_state_dir
+
     def __init__(self, verbose: bool):
         self.console = Console()
         self.logging = logging.getLogger()
         self.verbose = verbose
 
         # Logging setup.
+        self.state_dir = self.get_state_dir()
+        if not self.state_dir.exists():
+            self.state_dir.mkdir(parents=True, mode=0o700)
+            self.state_dir.chmod(0o700)
+        else:
+            self.state_dir.chmod(0o700)
+
+        log_file = self.state_dir / f"{os.path.basename(__file__)}.log"
+        if not log_file.exists():
+            log_file.touch(mode=0o600)
+        log_file.chmod(0o600)
+
         logging_file_handler = RotatingFileHandler(
-            filename=os.path.join(os.getcwd(), f"{os.path.basename(__file__)}.log"),
+            filename=str(log_file),
             encoding="utf-8",
             maxBytes=1024 * 1024,
             backupCount=5,
