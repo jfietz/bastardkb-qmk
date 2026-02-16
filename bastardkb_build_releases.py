@@ -172,10 +172,11 @@ ALL_FIRMWARES: Sequence[FirmwareList] = (
 
 
 class Reporter(object):
-    def __init__(self, verbose: bool):
+    def __init__(self, verbose: bool, dry_run: bool = False):
         self.console = Console()
         self.logging = logging.getLogger()
         self.verbose = verbose
+        self.dry_run = dry_run
 
         # Logging setup.
         logging_file_handler = RotatingFileHandler(
@@ -233,19 +234,31 @@ class Reporter(object):
     def print_summary(self, success_count: int, total_count: int) -> None:
         failed_count = total_count - success_count
         if failed_count == 0:
-            self.console.print(
-                Panel(
-                    Text("All firmwares built successfully! 🎉", justify="center", style="bold green"),
-                    title="[bold green]Success[/bold green]",
-                    border_style="green",
-                    padding=(1, 2),
+            if self.dry_run:
+                self.console.print(
+                    Panel(
+                        Text("All firmwares simulated successfully! 🧪", justify="center", style="bold blue"),
+                        title="[bold blue]Dry Run Success[/bold blue]",
+                        border_style="blue",
+                        padding=(1, 2),
+                    )
                 )
-            )
+            else:
+                self.console.print(
+                    Panel(
+                        Text("All firmwares built successfully! 🎉", justify="center", style="bold green"),
+                        title="[bold green]Success[/bold green]",
+                        border_style="green",
+                        padding=(1, 2),
+                    )
+                )
         else:
+            title = "[bold red]Dry Run Completed with Errors[/bold red]" if self.dry_run else "[bold red]Build Completed with Errors[/bold red]"
+            msg = f"{success_count} {'simulated' if self.dry_run else 'built'}\n{failed_count} failed"
             self.console.print(
                 Panel(
-                    Text(f"{success_count} built\n{failed_count} failed", justify="center"),
-                    title="[bold red]Build Completed with Errors[/bold red]",
+                    Text(msg, justify="center"),
+                    title=title,
                     border_style="red",
                     padding=(1, 2),
                 )
@@ -508,7 +521,7 @@ def main() -> None:
         default=".*",
     )
     cmdline_args = parser.parse_args()
-    reporter = Reporter(cmdline_args.verbose)
+    reporter = Reporter(cmdline_args.verbose, cmdline_args.dry_run)
 
     # Install SIGINT handler.
     signal.signal(signal.SIGINT, partial(sigint_handler, reporter))

@@ -14,7 +14,18 @@ if "rich" not in sys.modules or not isinstance(sys.modules["rich"], MagicMock):
     sys.modules["rich.live"] = MagicMock()
     sys.modules["rich.panel"] = MagicMock()
     # Mock Panel class specifically since it might be used with isinstance
-    sys.modules["rich.panel"].Panel = MagicMock
+    class MockPanel(MagicMock):
+        def __init__(self, *args, **kwargs):
+            # Don't pass args to super.__init__ to avoid spec issue
+            super().__init__()
+            self.args = args
+            self.kwargs = kwargs
+            if 'title' in kwargs:
+                self.title = kwargs['title']
+            if args:
+                self.renderable = args[0]
+
+    sys.modules["rich.panel"].Panel = MockPanel
     sys.modules["rich.progress"] = MagicMock()
     sys.modules["rich.text"] = MagicMock()
 
