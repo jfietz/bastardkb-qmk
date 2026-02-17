@@ -178,12 +178,18 @@ class Reporter(object):
         self.verbose = verbose
 
         # Logging setup.
+        state_dir = get_state_dir()
+        state_dir.mkdir(parents=True, exist_ok=True)
+        os.chmod(state_dir, 0o700)
+
+        log_file = state_dir / f"{os.path.basename(__file__)}.log"
         logging_file_handler = RotatingFileHandler(
-            filename=os.path.join(os.getcwd(), f"{os.path.basename(__file__)}.log"),
+            filename=log_file,
             encoding="utf-8",
             maxBytes=1024 * 1024,
             backupCount=5,
         )
+        os.chmod(log_file, 0o600)
         logging_file_handler.setFormatter(logging.Formatter(fmt="%(asctime)s %(levelname)s %(message)s"))
         self.logging.addHandler(logging_file_handler)
         self.logging.setLevel(level=logging.DEBUG)
@@ -346,6 +352,15 @@ class Executor(object):
 
 def total_firmware_count_reduce_callback(acc: int, firmware_list: FirmwareList) -> int:
     return acc + len(firmware_list.configurations)
+
+
+def get_state_dir() -> Path:
+    xdg_state_home = os.environ.get("XDG_STATE_HOME")
+    if xdg_state_home:
+        state_dir = Path(xdg_state_home)
+    else:
+        state_dir = Path(os.path.expanduser("~/.local/state"))
+    return state_dir / "bastardkb-qmk"
 
 
 def read_firmware_filename_from_logs(firmware: Firmware, log_file: Path) -> Path:
