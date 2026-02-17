@@ -5,3 +5,7 @@
 ## 2024-05-24 - [Smart Defaults in CLI]
 **Learning:** Build tools that default to single-threaded execution on modern hardware create a sluggish first impression. Auto-detecting resources (like `os.cpu_count()`) respects the user's hardware and time, making the tool feel "smart" out of the box.
 **Action:** Inspect CLI default arguments for performance bottlenecks and replace static defaults with dynamic, environment-aware values where safe.
+
+## 2024-05-27 - [Actionable CLI Summaries]
+**Learning:** CLI build summaries that only say "Success" or "Failure" force users to dig for context. Adding success rates (e.g., "80%") and explicit log paths turns a passive status update into an immediate debugging tool.
+**Action:** Ensure all CLI summary panels include quantifiable metrics and direct paths to detailed artifacts or logs.

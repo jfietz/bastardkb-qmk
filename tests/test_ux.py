@@ -53,12 +53,18 @@ class TestUX(unittest.TestCase):
         self.assertIsInstance(args[0], Panel)
         # Note: rich markup might be in the title, e.g. [bold green]Success[/bold green]
         self.assertIn("Success", args[0].title)
+        # Verify log directory is in the panel content
+        # args[0].renderable might be a Text object
+        self.assertIn("Logs:", str(args[0].renderable))
 
         # Test Failure Case
         reporter.print_summary(8, 10)
         args, _ = reporter.console.print.call_args
         self.assertIsInstance(args[0], Panel)
         self.assertIn("Build Completed with Errors", args[0].title)
+        # Verify percentage is in the panel content
+        self.assertIn("80.0%", str(args[0].renderable))
+        self.assertIn("Logs:", str(args[0].renderable))
 
 if __name__ == '__main__':
     unittest.main()
