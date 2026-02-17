@@ -312,7 +312,8 @@ class Executor(object):
         argv = (
             "qmk",
             "compile",
-            "--clean",
+            # Enable incremental builds by not cleaning the build directory.
+            # "--clean",
             "--parallel",
             str(self.parallel),
             "--keyboard",
