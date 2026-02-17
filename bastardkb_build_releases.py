@@ -232,24 +232,30 @@ class Reporter(object):
 
     def print_summary(self, success_count: int, total_count: int) -> None:
         failed_count = total_count - success_count
+        success_rate = (success_count / total_count * 100) if total_count > 0 else 0.0
+
         if failed_count == 0:
-            self.console.print(
-                Panel(
-                    Text("All firmwares built successfully! 🎉", justify="center", style="bold green"),
-                    title="[bold green]Success[/bold green]",
-                    border_style="green",
-                    padding=(1, 2),
-                )
-            )
+            message = Text("All firmwares built successfully! 🎉", justify="center", style="bold green")
+            title = "[bold green]Success[/bold green]"
+            border_style = "green"
         else:
-            self.console.print(
-                Panel(
-                    Text(f"{success_count} built\n{failed_count} failed", justify="center"),
-                    title="[bold red]Build Completed with Errors[/bold red]",
-                    border_style="red",
-                    padding=(1, 2),
-                )
+            message = Text(
+                f"{success_count} built ({success_rate:.1f}%)\n{failed_count} failed",
+                justify="center",
             )
+            title = "[bold red]Build Completed with Errors[/bold red]"
+            border_style = "red"
+
+        message.append(f"\n\nLogs: {self.log_dir}", style="italic dim")
+
+        self.console.print(
+            Panel(
+                message,
+                title=title,
+                border_style=border_style,
+                padding=(1, 2),
+            )
+        )
         self.logging.info(f"Done: built={success_count}, failed={failed_count}")
 
 
