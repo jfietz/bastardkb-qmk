@@ -90,6 +90,11 @@ ALL_MCUS: Sequence[str] = (
     *ARM_MCUS,
 )
 
+def get_state_dir() -> Path:
+    state_home = Path(os.environ.get("XDG_STATE_HOME", "~/.local/state")).expanduser()
+    return state_home / "bastardkb-qmk"
+
+
 ALL_FIRMWARES: Sequence[FirmwareList] = (
     # All firmwares built on the `bkb-master` branch, ie. the branch tracking
     # `qmk/qmk_firmware:master`.
@@ -178,12 +183,22 @@ class Reporter(object):
         self.verbose = verbose
 
         # Logging setup.
-        logging_file_handler = RotatingFileHandler(
-            filename=os.path.join(os.getcwd(), f"{os.path.basename(__file__)}.log"),
-            encoding="utf-8",
-            maxBytes=1024 * 1024,
-            backupCount=5,
-        )
+        log_dir = get_state_dir()
+        log_dir.mkdir(parents=True, exist_ok=True)
+        os.chmod(log_dir, 0o700)
+
+        # Set umask to ensure log file is created with 0600 permissions.
+        original_umask = os.umask(0o077)
+        try:
+            logging_file_handler = RotatingFileHandler(
+                filename=log_dir / f"{os.path.basename(__file__)}.log",
+                encoding="utf-8",
+                maxBytes=1024 * 1024,
+                backupCount=5,
+            )
+        finally:
+            os.umask(original_umask)
+
         logging_file_handler.setFormatter(logging.Formatter(fmt="%(asctime)s %(levelname)s %(message)s"))
         self.logging.addHandler(logging_file_handler)
         self.logging.setLevel(level=logging.DEBUG)
