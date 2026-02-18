@@ -54,11 +54,22 @@ class TestUX(unittest.TestCase):
         # Note: rich markup might be in the title, e.g. [bold green]Success[/bold green]
         self.assertIn("Success", args[0].title)
 
+        # Check content includes log path
+        content = str(args[0].renderable)
+        self.assertIn("All firmwares built successfully!", content)
+        self.assertIn(reporter.log_dir, content)
+
         # Test Failure Case
         reporter.print_summary(8, 10)
         args, _ = reporter.console.print.call_args
         self.assertIsInstance(args[0], Panel)
         self.assertIn("Build Completed with Errors", args[0].title)
+
+        # Check content includes percentage and log path
+        content = str(args[0].renderable)
+        self.assertIn("8 built (80.0%)", content)
+        self.assertIn("2 failed", content)
+        self.assertIn(reporter.log_dir, content)
 
 if __name__ == '__main__':
     unittest.main()

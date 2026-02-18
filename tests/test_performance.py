@@ -5,18 +5,24 @@ from unittest.mock import MagicMock, patch
 from pathlib import Path
 
 # Mock dependencies if not already mocked
-if "pygit2" not in sys.modules or not isinstance(sys.modules["pygit2"], MagicMock):
-    sys.modules["pygit2"] = MagicMock()
+try:
+    import pygit2
+except ImportError:
+    if "pygit2" not in sys.modules:
+        sys.modules["pygit2"] = MagicMock()
 
-if "rich" not in sys.modules or not isinstance(sys.modules["rich"], MagicMock):
-    sys.modules["rich"] = MagicMock()
-    sys.modules["rich.console"] = MagicMock()
-    sys.modules["rich.live"] = MagicMock()
-    sys.modules["rich.panel"] = MagicMock()
-    # Mock Panel class specifically since it might be used with isinstance
-    sys.modules["rich.panel"].Panel = MagicMock
-    sys.modules["rich.progress"] = MagicMock()
-    sys.modules["rich.text"] = MagicMock()
+try:
+    import rich
+except ImportError:
+    if "rich" not in sys.modules:
+        sys.modules["rich"] = MagicMock()
+        sys.modules["rich.console"] = MagicMock()
+        sys.modules["rich.live"] = MagicMock()
+        sys.modules["rich.panel"] = MagicMock()
+        # Mock Panel class specifically since it might be used with isinstance
+        sys.modules["rich.panel"].Panel = MagicMock
+        sys.modules["rich.progress"] = MagicMock()
+        sys.modules["rich.text"] = MagicMock()
 
 # Add root to sys.path
 sys.path.append(os.path.abspath(os.path.join(os.path.dirname(__file__), '..')))
