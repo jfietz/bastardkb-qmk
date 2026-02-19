@@ -171,6 +171,14 @@ ALL_FIRMWARES: Sequence[FirmwareList] = (
 )
 
 
+def get_state_dir() -> Path:
+    xdg_state_home = os.environ.get("XDG_STATE_HOME", os.path.expanduser("~/.local/state"))
+    state_dir = Path(xdg_state_home) / "bastardkb-qmk"
+    state_dir.mkdir(parents=True, exist_ok=True)
+    state_dir.chmod(0o700)
+    return state_dir
+
+
 class Reporter(object):
     def __init__(self, verbose: bool):
         self.console = Console()
@@ -178,18 +186,28 @@ class Reporter(object):
         self.verbose = verbose
 
         # Logging setup.
-        logging_file_handler = RotatingFileHandler(
-            filename=os.path.join(os.getcwd(), f"{os.path.basename(__file__)}.log"),
-            encoding="utf-8",
-            maxBytes=1024 * 1024,
-            backupCount=5,
-        )
+        state_dir = get_state_dir()
+        log_file = state_dir / "bastardkb_build_releases.log"
+
+        # Ensure log file has restricted permissions
+        old_umask = os.umask(0o077)
+        try:
+            logging_file_handler = RotatingFileHandler(
+                filename=log_file,
+                encoding="utf-8",
+                maxBytes=1024 * 1024,
+                backupCount=5,
+            )
+        finally:
+            os.umask(old_umask)
+
         logging_file_handler.setFormatter(logging.Formatter(fmt="%(asctime)s %(levelname)s %(message)s"))
         self.logging.addHandler(logging_file_handler)
         self.logging.setLevel(level=logging.DEBUG)
 
         self.log_dir = tempfile.mkdtemp()
         self.debug(f"Saving logs in: {self.log_dir}")
+        self.debug(f"Application log: {log_file}")
 
         # Progress status.
         self._progress_status = lambda _: None
