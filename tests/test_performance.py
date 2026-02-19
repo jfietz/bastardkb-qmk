@@ -83,5 +83,35 @@ class TestPerformance(unittest.TestCase):
         result = bkb.total_firmware_count_reduce_callback(acc, firmware_list)
         self.assertEqual(result, 3)
 
+    def test_qmk_compile_incremental(self):
+        """Verify qmk compile does not use --clean flag to allow incremental builds."""
+        # Setup mocks
+        reporter = MagicMock()
+        repository = MagicMock()
+        parallel = 1
+
+        # We need to ensure we can instantiate Executor even with mocks
+        executor = bkb.Executor(reporter, repository, dry_run=False, parallel=parallel)
+
+        # Mock worktree
+        worktree = MagicMock()
+        worktree.path = Path("/tmp/test_worktree")
+
+        # Mock Firmware
+        firmware = bkb.Firmware(keyboard="test_keyboard", keymap="test_keymap")
+
+        # Mock _run
+        executor._run = MagicMock()
+        success_process = MagicMock()
+        success_process.returncode = 0
+        executor._run.return_value = success_process
+
+        # Run the method
+        executor.qmk_compile(firmware, worktree)
+
+        # Verify _run was called without --clean
+        args = executor._run.call_args[0][0]
+        self.assertNotIn("--clean", args)
+
 if __name__ == '__main__':
     unittest.main()
