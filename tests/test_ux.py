@@ -34,6 +34,13 @@ class TestUX(unittest.TestCase):
         reporter = bkb.Reporter(verbose=False)
         self.assertTrue(hasattr(reporter, "print_summary"), "Reporter missing print_summary method")
 
+    def test_reporter_initialization(self):
+        """Verify Reporter initializes completely."""
+        reporter = bkb.Reporter(verbose=False)
+        # Check that _progress_status is initialized (it was accidentally unreachable before)
+        self.assertTrue(hasattr(reporter, "_progress_status"), "Reporter missing _progress_status attribute")
+        self.assertTrue(callable(reporter._progress_status), "_progress_status should be callable")
+
     def test_print_summary_behavior(self):
         """Verify print_summary prints a Panel."""
         reporter = bkb.Reporter(verbose=False)

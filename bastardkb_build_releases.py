@@ -178,12 +178,19 @@ class Reporter(object):
         self.verbose = verbose
 
         # Logging setup.
-        logging_file_handler = RotatingFileHandler(
-            filename=os.path.join(os.getcwd(), f"{os.path.basename(__file__)}.log"),
-            encoding="utf-8",
-            maxBytes=1024 * 1024,
-            backupCount=5,
-        )
+        log_dir = self.get_state_dir()
+        log_file = log_dir / f"{os.path.basename(__file__)}.log"
+        old_umask = os.umask(0o077)
+        try:
+            logging_file_handler = RotatingFileHandler(
+                filename=log_file,
+                encoding="utf-8",
+                maxBytes=1024 * 1024,
+                backupCount=5,
+            )
+        finally:
+            os.umask(old_umask)
+
         logging_file_handler.setFormatter(logging.Formatter(fmt="%(asctime)s %(levelname)s %(message)s"))
         self.logging.addHandler(logging_file_handler)
         self.logging.setLevel(level=logging.DEBUG)
@@ -193,6 +200,13 @@ class Reporter(object):
 
         # Progress status.
         self._progress_status = lambda _: None
+
+    def get_state_dir(self) -> Path:
+        xdg_state_home = os.environ.get("XDG_STATE_HOME", os.path.expanduser("~/.local/state"))
+        state_dir = Path(xdg_state_home, "bastardkb-qmk")
+        if not state_dir.exists():
+            state_dir.mkdir(parents=True, mode=0o700)
+        return state_dir
 
     def log_file(self, basename: str) -> Path:
         return Path(self.log_dir, basename).with_suffix(".log")
