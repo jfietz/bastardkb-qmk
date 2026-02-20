@@ -235,7 +235,11 @@ class Reporter(object):
         if failed_count == 0:
             self.console.print(
                 Panel(
-                    Text("All firmwares built successfully! 🎉", justify="center", style="bold green"),
+                    Text(
+                        f"All firmwares built successfully! 🎉\n\nLogs available at: {self.log_dir}",
+                        justify="center",
+                        style="bold green",
+                    ),
                     title="[bold green]Success[/bold green]",
                     border_style="green",
                     padding=(1, 2),
@@ -244,7 +248,10 @@ class Reporter(object):
         else:
             self.console.print(
                 Panel(
-                    Text(f"{success_count} built\n{failed_count} failed", justify="center"),
+                    Text(
+                        f"{success_count} built\n{failed_count} failed\n\nLogs available at: {self.log_dir}",
+                        justify="center",
+                    ),
                     title="[bold red]Build Completed with Errors[/bold red]",
                     border_style="red",
                     padding=(1, 2),

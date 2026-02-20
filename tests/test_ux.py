@@ -60,5 +60,26 @@ class TestUX(unittest.TestCase):
         self.assertIsInstance(args[0], Panel)
         self.assertIn("Build Completed with Errors", args[0].title)
 
+    def test_print_summary_includes_log_dir(self):
+        """Verify print_summary includes the log directory path."""
+        reporter = bkb.Reporter(verbose=False)
+        reporter.console = MagicMock()
+        reporter.logging = MagicMock()
+        reporter.log_dir = "/tmp/test_log_dir"
+
+        # Test Success Case
+        reporter.print_summary(10, 10)
+        args, _ = reporter.console.print.call_args
+        panel = args[0]
+        # Check if the panel text contains the log directory
+        # The renderable in Panel is a Text object in this case
+        self.assertIn("/tmp/test_log_dir", str(panel.renderable))
+
+        # Test Failure Case
+        reporter.print_summary(8, 10)
+        args, _ = reporter.console.print.call_args
+        panel = args[0]
+        self.assertIn("/tmp/test_log_dir", str(panel.renderable))
+
 if __name__ == '__main__':
     unittest.main()
