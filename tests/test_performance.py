@@ -5,10 +5,14 @@ from unittest.mock import MagicMock, patch
 from pathlib import Path
 
 # Mock dependencies if not already mocked
-if "pygit2" not in sys.modules or not isinstance(sys.modules["pygit2"], MagicMock):
+try:
+    import pygit2
+except ImportError:
     sys.modules["pygit2"] = MagicMock()
 
-if "rich" not in sys.modules or not isinstance(sys.modules["rich"], MagicMock):
+try:
+    import rich
+except ImportError:
     sys.modules["rich"] = MagicMock()
     sys.modules["rich.console"] = MagicMock()
     sys.modules["rich.live"] = MagicMock()
@@ -24,6 +28,26 @@ sys.path.append(os.path.abspath(os.path.join(os.path.dirname(__file__), '..')))
 import bastardkb_build_releases as bkb
 
 class TestPerformance(unittest.TestCase):
+    def test_qmk_compile_incremental_build(self):
+        """Verify qmk compile allows incremental builds by omitting --clean."""
+        reporter = MagicMock()
+        repository = MagicMock()
+        executor = bkb.Executor(reporter, repository, dry_run=False, parallel=1)
+
+        firmware = bkb.Firmware(keyboard="test_kb", keymap="test_km")
+        worktree = MagicMock()
+        worktree.path = Path("/tmp")
+
+        executor._run = MagicMock()
+        executor._run.return_value = MagicMock(returncode=0)
+
+        executor.qmk_compile(firmware, worktree)
+
+        # Check arguments passed to subprocess.run (via _run)
+        # _run(argv, ...) -> argv is the first arg
+        args = executor._run.call_args[0][0]
+        self.assertNotIn("--clean", args, "qmk compile should not use --clean to allow incremental builds")
+
     def test_git_submodule_update_uses_jobs(self):
         """Verify git submodule update uses --jobs argument."""
         # Setup mocks
