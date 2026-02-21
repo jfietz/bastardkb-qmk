@@ -5,6 +5,17 @@ from unittest.mock import MagicMock, patch
 from pathlib import Path
 import subprocess
 
+# Mock pygit2 and rich before import if not present
+if "pygit2" not in sys.modules:
+    sys.modules["pygit2"] = MagicMock()
+if "rich" not in sys.modules:
+    sys.modules["rich"] = MagicMock()
+    sys.modules["rich.console"] = MagicMock()
+    sys.modules["rich.live"] = MagicMock()
+    sys.modules["rich.panel"] = MagicMock()
+    sys.modules["rich.progress"] = MagicMock()
+    sys.modules["rich.text"] = MagicMock()
+
 # Add root to sys.path
 sys.path.append(os.path.abspath(os.path.join(os.path.dirname(__file__), '..')))
 
