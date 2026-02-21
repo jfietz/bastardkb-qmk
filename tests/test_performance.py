@@ -14,7 +14,15 @@ if "rich" not in sys.modules or not isinstance(sys.modules["rich"], MagicMock):
     sys.modules["rich.live"] = MagicMock()
     sys.modules["rich.panel"] = MagicMock()
     # Mock Panel class specifically since it might be used with isinstance
-    sys.modules["rich.panel"].Panel = MagicMock
+    class MockPanel(MagicMock):
+        def __init__(self, *args, **kwargs):
+            super().__init__()
+            if args:
+                self.renderable = args[0]
+            for key, value in kwargs.items():
+                setattr(self, key, value)
+
+    sys.modules["rich.panel"].Panel = MockPanel
     sys.modules["rich.progress"] = MagicMock()
     sys.modules["rich.text"] = MagicMock()
 
@@ -82,6 +90,37 @@ class TestPerformance(unittest.TestCase):
         # Call the function directly
         result = bkb.total_firmware_count_reduce_callback(acc, firmware_list)
         self.assertEqual(result, 3)
+
+    def test_qmk_compile_incremental(self):
+        """Verify qmk compile is called without --clean flag for incremental builds."""
+        # Setup mocks
+        reporter = MagicMock()
+        repository = MagicMock()
+        executor = bkb.Executor(reporter, repository, dry_run=False, parallel=1)
+
+        # Mock _run
+        executor._run = MagicMock()
+        executor._run.return_value = MagicMock(returncode=0)
+
+        # Mock Firmware and Worktree
+        firmware = MagicMock()
+        firmware.keyboard = "test_kb"
+        firmware.keymap = "test_km"
+        firmware.output_filename = "test_output"
+        firmware.env_vars = []
+
+        worktree = MagicMock()
+        worktree.path = Path("/tmp/test_worktree")
+
+        # Run the method
+        executor.qmk_compile(firmware, worktree)
+
+        # Verify arguments passed to _run
+        self.assertTrue(executor._run.called)
+        args = executor._run.call_args[0][0]
+
+        # Check that --clean is NOT present
+        self.assertNotIn("--clean", args, "qmk compile should not use --clean flag to allow incremental builds")
 
 if __name__ == '__main__':
     unittest.main()
