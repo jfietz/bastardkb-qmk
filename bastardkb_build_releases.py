@@ -13,9 +13,9 @@ import sys
 import tempfile
 
 from collections.abc import Callable, Sequence
-from functools import partial, reduce
+import itertools
+from functools import partial
 from logging.handlers import RotatingFileHandler
-from operator import iconcat
 from pathlib import Path, PurePath
 from pygit2 import (
     GitError,
@@ -323,7 +323,7 @@ class Executor(object):
             f"TARGET={firmware.output_filename}",
             "--env",
             "USE_CCACHE=yes",
-            *reduce(iconcat, (("-e", env_var) for env_var in firmware.env_vars), []),
+            *itertools.chain.from_iterable(("-e", env_var) for env_var in firmware.env_vars),
         )
         log_file = self.reporter.log_file(f"qmk-compile-{firmware.output_filename}")
         return QmkCompletedProcess(self._run(argv, log_file=log_file, cwd=worktree.path), log_file)
@@ -344,19 +344,22 @@ class Executor(object):
         return subprocess.CompletedProcess(args=argv, returncode=0)
 
 
-def total_firmware_count_reduce_callback(acc: int, firmware_list: FirmwareList) -> int:
-    return acc + len(firmware_list.configurations)
+EXTENSION_PATTERN = re.compile(r"^\.[a-z0-9]+$")
 
 
 def read_firmware_filename_from_logs(firmware: Firmware, log_file: Path) -> Path:
-    pattern = re.compile(
-        f"Copying (?P<filename>{re.escape(firmware.output_filename)}\\.[a-z0-9]+) to qmk_firmware folder"
-    )
+    expected_prefix = firmware.output_filename
     with log_file.open() as fd:
         for line in fd:
-            match = pattern.match(line)
-            if match:
-                return Path(match.group("filename"))
+            if line.startswith("Copying "):
+                part = line[8:]  # remove "Copying "
+                idx = part.find(" to qmk_firmware folder")
+                if idx != -1:
+                    filename = part[:idx]
+                    if filename.startswith(expected_prefix):
+                        suffix = filename[len(expected_prefix) :]
+                        if EXTENSION_PATTERN.match(suffix):
+                            return Path(filename)
     raise FileNotFoundError()
 
 
@@ -365,13 +368,14 @@ def apply_filter(
     pattern: re.Pattern,
 ) -> Sequence[FirmwareList]:
     return tuple(
-        filter(
-            lambda firmware_list: len(firmware_list.configurations),
-            tuple(
-                FirmwareList(branch, tuple(firmware for firmware in configurations if pattern.match(str(firmware))))
-                for branch, configurations in firmwares
-            ),
+        firmware_list
+        for firmware_list in (
+            FirmwareList(
+                branch, tuple(firmware for firmware in configurations if pattern.match(str(firmware)))
+            )
+            for branch, configurations in firmwares
         )
+        if len(firmware_list.configurations) > 0
     )
 
 
@@ -392,7 +396,7 @@ def build(
     )
     progress_group = Group(empty_status, overall_status, overall_progress)
 
-    total_firmware_count = reduce(total_firmware_count_reduce_callback, firmwares, 0)
+    total_firmware_count = sum(len(fl.configurations) for fl in firmwares)
     built_firmware_count = 0
     newline_task = empty_status.add_task("")
     overall_status_task = overall_status.add_task("Preparing…")

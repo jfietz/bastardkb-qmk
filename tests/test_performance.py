@@ -78,18 +78,41 @@ class TestPerformance(unittest.TestCase):
 
         self.assertTrue(found, f"git submodule update was not called with --jobs {parallel_jobs}. Called with: {git_submodule_call_args}")
 
-    def test_total_firmware_count_reduce_callback_efficiency(self):
-        """Verify reduce callback works correctly (doesn't crash) without explicit list conversion."""
-        # Mock FirmwareList
-        FirmwareList = MagicMock()
-        firmware_list = MagicMock()
-        # Mock configurations as a sequence (tuple)
-        firmware_list.configurations = (1, 2, 3)
+    def test_read_firmware_filename_from_logs(self):
+        """Verify read_firmware_filename_from_logs parses correctly using string ops."""
+        firmware = MagicMock()
+        firmware.output_filename = "bastardkb_skeletyl_default"
 
-        acc = 0
-        # Call the function directly
-        result = bkb.total_firmware_count_reduce_callback(acc, firmware_list)
-        self.assertEqual(result, 3)
+        log_file = MagicMock()
+        # The function calls log_file.open() -> context manager -> file object -> iterator of lines
+        mock_file_handle = MagicMock()
+        mock_file_handle.__iter__.return_value = [
+            "Compiling...\n",
+            "Compiling...\n",
+            "Copying bastardkb_skeletyl_default.hex to qmk_firmware folder\n",
+            "Done.\n"
+        ]
+        log_file.open.return_value.__enter__.return_value = mock_file_handle
+
+        result = bkb.read_firmware_filename_from_logs(firmware, log_file)
+        self.assertEqual(result, Path("bastardkb_skeletyl_default.hex"))
+
+    def test_read_firmware_filename_from_logs_no_match(self):
+        """Verify read_firmware_filename_from_logs raises FileNotFoundError if not found."""
+        firmware = MagicMock()
+        firmware.output_filename = "bastardkb_skeletyl_default"
+
+        log_file = MagicMock()
+        mock_file_handle = MagicMock()
+        mock_file_handle.__iter__.return_value = [
+            "Compiling...\n",
+            "Copying some_other_firmware.hex to qmk_firmware folder\n",
+            "Done.\n"
+        ]
+        log_file.open.return_value.__enter__.return_value = mock_file_handle
+
+        with self.assertRaises(FileNotFoundError):
+            bkb.read_firmware_filename_from_logs(firmware, log_file)
 
     def test_qmk_compile_incremental(self):
         """Verify qmk compile is called without --clean flag for incremental builds."""
