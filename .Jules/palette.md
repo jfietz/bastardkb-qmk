@@ -5,3 +5,7 @@
 ## 2024-05-24 - [Smart Defaults in CLI]
 **Learning:** Build tools that default to single-threaded execution on modern hardware create a sluggish first impression. Auto-detecting resources (like `os.cpu_count()`) respects the user's hardware and time, making the tool feel "smart" out of the box.
 **Action:** Inspect CLI default arguments for performance bottlenecks and replace static defaults with dynamic, environment-aware values where safe.
+
+## 2024-05-24 - [Log Discoverability]
+**Learning:** Build tools that bury log locations in verbose output force users to hunt for critical troubleshooting information. Explicitly including the log directory path in the final summary panel transforms "where are the logs?" frustration into immediate actionability.
+**Action:** Always include the full path to logs or build artifacts in the final success/failure summary of a CLI tool.
