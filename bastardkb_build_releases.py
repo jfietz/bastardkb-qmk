@@ -312,7 +312,7 @@ class Executor(object):
         argv = (
             "qmk",
             "compile",
-            "--clean",
+            # Optimization: do not use --clean to enable incremental builds and ccache
             "--parallel",
             str(self.parallel),
             "--keyboard",
