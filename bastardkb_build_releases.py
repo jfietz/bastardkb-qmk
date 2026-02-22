@@ -178,12 +178,22 @@ class Reporter(object):
         self.verbose = verbose
 
         # Logging setup.
-        logging_file_handler = RotatingFileHandler(
-            filename=os.path.join(os.getcwd(), f"{os.path.basename(__file__)}.log"),
-            encoding="utf-8",
-            maxBytes=1024 * 1024,
-            backupCount=5,
+        log_dir = os.path.join(
+            os.environ.get("XDG_STATE_HOME", os.path.expanduser("~/.local/state")),
+            "bastardkb-qmk",
         )
+        os.makedirs(log_dir, mode=0o700, exist_ok=True)
+        # Create log file with 0600 permissions
+        old_umask = os.umask(0o077)
+        try:
+            logging_file_handler = RotatingFileHandler(
+                filename=os.path.join(log_dir, "bastardkb_build_releases.log"),
+                encoding="utf-8",
+                maxBytes=1024 * 1024,
+                backupCount=5,
+            )
+        finally:
+            os.umask(old_umask)
         logging_file_handler.setFormatter(logging.Formatter(fmt="%(asctime)s %(levelname)s %(message)s"))
         self.logging.addHandler(logging_file_handler)
         self.logging.setLevel(level=logging.DEBUG)
