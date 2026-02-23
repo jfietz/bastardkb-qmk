@@ -5,3 +5,7 @@
 ## 2024-05-24 - [Smart Defaults in CLI]
 **Learning:** Build tools that default to single-threaded execution on modern hardware create a sluggish first impression. Auto-detecting resources (like `os.cpu_count()`) respects the user's hardware and time, making the tool feel "smart" out of the box.
 **Action:** Inspect CLI default arguments for performance bottlenecks and replace static defaults with dynamic, environment-aware values where safe.
+
+## 2024-06-03 - [Consolidated Error Reporting]
+**Learning:** For batch operations (like building multiple firmwares), displaying a success/failure count is insufficient. Users need to know *which* items failed immediately in the summary, without scrolling back through logs.
+**Action:** When a batch process completes with errors, list the specific failed items in the summary panel alongside the counts.
