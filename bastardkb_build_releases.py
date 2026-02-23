@@ -178,15 +178,28 @@ class Reporter(object):
         self.verbose = verbose
 
         # Logging setup.
-        logging_file_handler = RotatingFileHandler(
-            filename=os.path.join(os.getcwd(), f"{os.path.basename(__file__)}.log"),
-            encoding="utf-8",
-            maxBytes=1024 * 1024,
-            backupCount=5,
-        )
+        xdg_state_home = os.environ.get("XDG_STATE_HOME", os.path.join(Path.home(), ".local", "state"))
+        log_dir = Path(xdg_state_home) / "bastardkb-qmk"
+        log_dir.mkdir(parents=True, exist_ok=True, mode=0o700)
+        log_file = log_dir / "bastardkb_build_releases.log"
+
+        # Set umask to ensure the log file is created with 0600 permissions.
+        original_umask = os.umask(0o077)
+        try:
+            logging_file_handler = RotatingFileHandler(
+                filename=log_file,
+                encoding="utf-8",
+                maxBytes=1024 * 1024,
+                backupCount=5,
+            )
+        finally:
+            os.umask(original_umask)
+
         logging_file_handler.setFormatter(logging.Formatter(fmt="%(asctime)s %(levelname)s %(message)s"))
         self.logging.addHandler(logging_file_handler)
         self.logging.setLevel(level=logging.DEBUG)
+
+        self.console.print(f"Logging to: [bold magenta]{log_file}[/bold magenta]")
 
         self.log_dir = tempfile.mkdtemp()
         self.debug(f"Saving logs in: {self.log_dir}")
