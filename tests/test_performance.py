@@ -1,6 +1,7 @@
 import unittest
 import sys
 import os
+import tempfile
 from unittest.mock import MagicMock, patch
 from pathlib import Path
 
@@ -78,18 +79,36 @@ class TestPerformance(unittest.TestCase):
 
         self.assertTrue(found, f"git submodule update was not called with --jobs {parallel_jobs}. Called with: {git_submodule_call_args}")
 
-    def test_total_firmware_count_reduce_callback_efficiency(self):
-        """Verify reduce callback works correctly (doesn't crash) without explicit list conversion."""
-        # Mock FirmwareList
-        FirmwareList = MagicMock()
-        firmware_list = MagicMock()
-        # Mock configurations as a sequence (tuple)
-        firmware_list.configurations = (1, 2, 3)
+    def test_read_firmware_filename_from_logs(self):
+        """Verify read_firmware_filename_from_logs extracts filename correctly."""
+        # Create a temporary file
 
-        acc = 0
-        # Call the function directly
-        result = bkb.total_firmware_count_reduce_callback(acc, firmware_list)
-        self.assertEqual(result, 3)
+        firmware = MagicMock()
+        firmware.output_filename = "bastardkb_charybdis_3x5_via"
+
+        with tempfile.NamedTemporaryFile(mode='w+', delete=False) as tmp:
+            tmp.write("Some log line\n")
+            tmp.write(f"Copying {firmware.output_filename}.hex to qmk_firmware folder\n")
+            tmp.write("Another log line\n")
+            tmp_path = Path(tmp.name)
+
+        try:
+            result = bkb.read_firmware_filename_from_logs(firmware, tmp_path)
+            self.assertEqual(result, Path(f"{firmware.output_filename}.hex"))
+
+            # Test failure case
+            with tempfile.NamedTemporaryFile(mode='w+', delete=False) as tmp_fail:
+                tmp_fail.write("No matching line\n")
+                tmp_fail_path = Path(tmp_fail.name)
+
+            try:
+                with self.assertRaises(FileNotFoundError):
+                    bkb.read_firmware_filename_from_logs(firmware, tmp_fail_path)
+            finally:
+                os.unlink(tmp_fail_path)
+
+        finally:
+            os.unlink(tmp_path)
 
     def test_qmk_compile_incremental(self):
         """Verify qmk compile is called without --clean flag for incremental builds."""

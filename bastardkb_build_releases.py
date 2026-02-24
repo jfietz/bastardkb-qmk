@@ -344,19 +344,23 @@ class Executor(object):
         return subprocess.CompletedProcess(args=argv, returncode=0)
 
 
-def total_firmware_count_reduce_callback(acc: int, firmware_list: FirmwareList) -> int:
-    return acc + len(firmware_list.configurations)
-
-
 def read_firmware_filename_from_logs(firmware: Firmware, log_file: Path) -> Path:
-    pattern = re.compile(
-        f"Copying (?P<filename>{re.escape(firmware.output_filename)}\\.[a-z0-9]+) to qmk_firmware folder"
-    )
+    prefix = "Copying "
+    target_start = f"{prefix}{firmware.output_filename}."
+    target_end = " to qmk_firmware folder"
+
     with log_file.open() as fd:
         for line in fd:
-            match = pattern.match(line)
-            if match:
-                return Path(match.group("filename"))
+            if line.startswith(target_start):
+                end_index = line.find(target_end, len(target_start))
+                if end_index != -1:
+                    filename = line[len(prefix) : end_index]
+                    # simple validation of extension
+                    # filename starts with firmware.output_filename + "."
+                    # extract extension
+                    extension = filename[len(firmware.output_filename) + 1 :]
+                    if extension.isalnum():
+                        return Path(filename)
     raise FileNotFoundError()
 
 
@@ -392,7 +396,7 @@ def build(
     )
     progress_group = Group(empty_status, overall_status, overall_progress)
 
-    total_firmware_count = reduce(total_firmware_count_reduce_callback, firmwares, 0)
+    total_firmware_count = sum(len(fl.configurations) for fl in firmwares)
     built_firmware_count = 0
     newline_task = empty_status.add_task("")
     overall_status_task = overall_status.add_task("Preparing…")
