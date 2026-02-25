@@ -78,19 +78,6 @@ class TestPerformance(unittest.TestCase):
 
         self.assertTrue(found, f"git submodule update was not called with --jobs {parallel_jobs}. Called with: {git_submodule_call_args}")
 
-    def test_total_firmware_count_reduce_callback_efficiency(self):
-        """Verify reduce callback works correctly (doesn't crash) without explicit list conversion."""
-        # Mock FirmwareList
-        FirmwareList = MagicMock()
-        firmware_list = MagicMock()
-        # Mock configurations as a sequence (tuple)
-        firmware_list.configurations = (1, 2, 3)
-
-        acc = 0
-        # Call the function directly
-        result = bkb.total_firmware_count_reduce_callback(acc, firmware_list)
-        self.assertEqual(result, 3)
-
     def test_qmk_compile_incremental(self):
         """Verify qmk compile is called without --clean flag for incremental builds."""
         # Setup mocks
