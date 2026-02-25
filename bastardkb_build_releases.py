@@ -11,6 +11,7 @@ import signal
 import subprocess
 import sys
 import tempfile
+import itertools
 
 from collections.abc import Callable, Sequence
 from functools import partial, reduce
@@ -323,7 +324,7 @@ class Executor(object):
             f"TARGET={firmware.output_filename}",
             "--env",
             "USE_CCACHE=yes",
-            *reduce(iconcat, (("-e", env_var) for env_var in firmware.env_vars), []),
+            *itertools.chain.from_iterable(("-e", env_var) for env_var in firmware.env_vars),
         )
         log_file = self.reporter.log_file(f"qmk-compile-{firmware.output_filename}")
         return QmkCompletedProcess(self._run(argv, log_file=log_file, cwd=worktree.path), log_file)
@@ -344,16 +345,14 @@ class Executor(object):
         return subprocess.CompletedProcess(args=argv, returncode=0)
 
 
-def total_firmware_count_reduce_callback(acc: int, firmware_list: FirmwareList) -> int:
-    return acc + len(firmware_list.configurations)
-
-
 def read_firmware_filename_from_logs(firmware: Firmware, log_file: Path) -> Path:
     pattern = re.compile(
         f"Copying (?P<filename>{re.escape(firmware.output_filename)}\\.[a-z0-9]+) to qmk_firmware folder"
     )
     with log_file.open() as fd:
         for line in fd:
+            if not line.startswith("Copying "):
+                continue
             match = pattern.match(line)
             if match:
                 return Path(match.group("filename"))
@@ -392,7 +391,7 @@ def build(
     )
     progress_group = Group(empty_status, overall_status, overall_progress)
 
-    total_firmware_count = reduce(total_firmware_count_reduce_callback, firmwares, 0)
+    total_firmware_count = sum(len(fl.configurations) for fl in firmwares)
     built_firmware_count = 0
     newline_task = empty_status.add_task("")
     overall_status_task = overall_status.add_task("Preparing…")

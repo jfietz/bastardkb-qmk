@@ -14,12 +14,20 @@ class TestUX(unittest.TestCase):
     def test_parallel_default_help(self):
         """Verify the help text shows the correct default for parallel."""
         cpu_count = os.cpu_count() or 1
-        result = subprocess.run(
-            [sys.executable, "bastardkb_build_releases.py", "--help"],
-            capture_output=True,
-            text=True
-        )
-        self.assertEqual(result.returncode, 0)
+
+        from io import StringIO
+        captured_output = StringIO()
+
+        # We need to ensure bkb.main is available and not calling subprocess
+        # Since we are in the same process, bkb is already imported with mocked pygit2 if needed.
+
+        with patch('sys.stdout', new=captured_output):
+            with patch('sys.argv', ["bastardkb_build_releases.py", "--help"]):
+                with self.assertRaises(SystemExit) as cm:
+                     bkb.main()
+                self.assertEqual(cm.exception.code, 0)
+
+        output = captured_output.getvalue()
 
         # We expect the help output to show the default value matching the CPU count
         # The help text now includes "Defaults to number of CPUs (<value>)"
@@ -27,7 +35,7 @@ class TestUX(unittest.TestCase):
         expected_pattern = fr"Parallel option to pass to qmk-compile\..*Defaults\s+to\s+number\s+of\s+CPUs\s+\({cpu_count}\)"
 
         # Using DOTALL to allow matching across lines if necessary, though argparse usually keeps it on one or wraps.
-        self.assertRegex(result.stdout, re.compile(expected_pattern, re.DOTALL))
+        self.assertRegex(output, re.compile(expected_pattern, re.DOTALL))
 
     def test_print_summary_exists(self):
         """Verify Reporter has print_summary method."""
