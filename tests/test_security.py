@@ -8,6 +8,27 @@ import subprocess
 # Add root to sys.path
 sys.path.append(os.path.abspath(os.path.join(os.path.dirname(__file__), '..')))
 
+# Mock external dependencies if not present
+try:
+    import rich
+    import pygit2
+except ImportError:
+    # We need to mock these BEFORE importing bastardkb_build_releases
+    sys.modules['pygit2'] = MagicMock()
+    # Mock rich components
+    sys.modules['rich'] = MagicMock()
+    sys.modules['rich.console'] = MagicMock()
+    sys.modules['rich.live'] = MagicMock()
+
+    # We need rich.panel.Panel to be a class or usable object if imported
+    mock_panel_module = MagicMock()
+    sys.modules['rich.panel'] = mock_panel_module
+    # Ensure Panel is available
+    mock_panel_module.Panel = MagicMock()
+
+    sys.modules['rich.progress'] = MagicMock()
+    sys.modules['rich.text'] = MagicMock()
+
 import bastardkb_build_releases as bkb
 
 class TestSecurity(unittest.TestCase):
