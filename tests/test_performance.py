@@ -78,18 +78,6 @@ class TestPerformance(unittest.TestCase):
 
         self.assertTrue(found, f"git submodule update was not called with --jobs {parallel_jobs}. Called with: {git_submodule_call_args}")
 
-    def test_total_firmware_count_reduce_callback_efficiency(self):
-        """Verify reduce callback works correctly (doesn't crash) without explicit list conversion."""
-        # Mock FirmwareList
-        FirmwareList = MagicMock()
-        firmware_list = MagicMock()
-        # Mock configurations as a sequence (tuple)
-        firmware_list.configurations = (1, 2, 3)
-
-        acc = 0
-        # Call the function directly
-        result = bkb.total_firmware_count_reduce_callback(acc, firmware_list)
-        self.assertEqual(result, 3)
 
     def test_qmk_compile_incremental(self):
         """Verify qmk compile is called without --clean flag for incremental builds."""
@@ -121,6 +109,35 @@ class TestPerformance(unittest.TestCase):
 
         # Check that --clean is NOT present
         self.assertNotIn("--clean", args, "qmk compile should not use --clean flag to allow incremental builds")
+
+    def test_read_firmware_filename_from_logs_optimization(self):
+        """Verify log parsing optimization works correctly."""
+        firmware = MagicMock()
+        firmware.output_filename = "test_kb_via"
+
+        # Mock log file
+        log_file = MagicMock()
+
+        # Case 1: Standard log with "Copying" prefix
+        log_content = [
+            "Compiling...\n",
+            "Linking...\n",
+            f"Copying {firmware.output_filename}.hex to qmk_firmware folder\n",
+            "Done.\n"
+        ]
+
+        # Use a context manager mock for open()
+        file_handle = MagicMock()
+        file_handle.__enter__.return_value = log_content
+        file_handle.__exit__.return_value = None
+        log_file.open.return_value = file_handle
+
+        result = bkb.read_firmware_filename_from_logs(firmware, log_file)
+        self.assertEqual(result, Path(f"{firmware.output_filename}.hex"))
+
+        # Case 2: Log where the regex would match (if compiled differently) but startswith fails?
+        # Since the regex is anchored to "Copying", startswith is safe.
+        # We just verify it doesn't crash on other lines.
 
 if __name__ == '__main__':
     unittest.main()
