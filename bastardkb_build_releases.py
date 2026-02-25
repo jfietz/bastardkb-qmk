@@ -178,18 +178,31 @@ class Reporter(object):
         self.verbose = verbose
 
         # Logging setup.
-        logging_file_handler = RotatingFileHandler(
-            filename=os.path.join(os.getcwd(), f"{os.path.basename(__file__)}.log"),
-            encoding="utf-8",
-            maxBytes=1024 * 1024,
-            backupCount=5,
-        )
+        xdg_state_home = os.environ.get("XDG_STATE_HOME", os.path.join(os.path.expanduser("~"), ".local", "state"))
+        self.app_log_dir = os.path.join(xdg_state_home, "bastardkb-qmk")
+        os.makedirs(self.app_log_dir, mode=0o700, exist_ok=True)
+
+        log_file = os.path.join(self.app_log_dir, "bastardkb_build_releases.log")
+
+        # Create log file with restricted permissions (0600)
+        old_umask = os.umask(0o077)
+        try:
+            logging_file_handler = RotatingFileHandler(
+                filename=log_file,
+                encoding="utf-8",
+                maxBytes=1024 * 1024,
+                backupCount=5,
+            )
+        finally:
+            os.umask(old_umask)
+
         logging_file_handler.setFormatter(logging.Formatter(fmt="%(asctime)s %(levelname)s %(message)s"))
         self.logging.addHandler(logging_file_handler)
         self.logging.setLevel(level=logging.DEBUG)
 
         self.log_dir = tempfile.mkdtemp()
-        self.debug(f"Saving logs in: {self.log_dir}")
+        self.debug(f"Saving build logs in: {self.log_dir}")
+        self.debug(f"Saving application logs in: {self.app_log_dir}")
 
         # Progress status.
         self._progress_status = lambda _: None
@@ -232,19 +245,24 @@ class Reporter(object):
 
     def print_summary(self, success_count: int, total_count: int) -> None:
         failed_count = total_count - success_count
+
+        log_info = Text(f"\n\nLogs saved in: {self.app_log_dir}", style="dim")
+
         if failed_count == 0:
+            content = Text("All firmwares built successfully! 🎉", justify="center", style="bold green") + log_info
             self.console.print(
                 Panel(
-                    Text("All firmwares built successfully! 🎉", justify="center", style="bold green"),
+                    content,
                     title="[bold green]Success[/bold green]",
                     border_style="green",
                     padding=(1, 2),
                 )
             )
         else:
+            content = Text(f"{success_count} built\n{failed_count} failed", justify="center") + log_info
             self.console.print(
                 Panel(
-                    Text(f"{success_count} built\n{failed_count} failed", justify="center"),
+                    content,
                     title="[bold red]Build Completed with Errors[/bold red]",
                     border_style="red",
                     padding=(1, 2),

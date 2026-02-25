@@ -4,30 +4,26 @@ import os
 from unittest.mock import MagicMock, patch
 from pathlib import Path
 
-# Mock dependencies if not already mocked
-if "pygit2" not in sys.modules or not isinstance(sys.modules["pygit2"], MagicMock):
-    sys.modules["pygit2"] = MagicMock()
-
-if "rich" not in sys.modules or not isinstance(sys.modules["rich"], MagicMock):
-    sys.modules["rich"] = MagicMock()
-    sys.modules["rich.console"] = MagicMock()
-    sys.modules["rich.live"] = MagicMock()
-    sys.modules["rich.panel"] = MagicMock()
-    # Mock Panel class specifically since it might be used with isinstance
-    class MockPanel(MagicMock):
-        def __init__(self, *args, **kwargs):
-            super().__init__()
-            if args:
-                self.renderable = args[0]
-            for key, value in kwargs.items():
-                setattr(self, key, value)
-
-    sys.modules["rich.panel"].Panel = MockPanel
-    sys.modules["rich.progress"] = MagicMock()
-    sys.modules["rich.text"] = MagicMock()
-
 # Add root to sys.path
 sys.path.append(os.path.abspath(os.path.join(os.path.dirname(__file__), '..')))
+
+# Mock dependencies before importing the module
+sys.modules["pygit2"] = MagicMock()
+sys.modules["rich"] = MagicMock()
+sys.modules["rich.console"] = MagicMock()
+sys.modules["rich.live"] = MagicMock()
+sys.modules["rich.panel"] = MagicMock()
+# Mock Panel class specifically since it might be used with isinstance
+class MockPanel(MagicMock):
+    def __init__(self, *args, **kwargs):
+        super().__init__()
+        if args:
+            self.renderable = args[0]
+        for key, value in kwargs.items():
+            setattr(self, key, value)
+sys.modules["rich.panel"].Panel = MockPanel
+sys.modules["rich.progress"] = MagicMock()
+sys.modules["rich.text"] = MagicMock()
 
 import bastardkb_build_releases as bkb
 
