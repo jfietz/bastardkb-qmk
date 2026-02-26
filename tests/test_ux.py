@@ -29,6 +29,8 @@ mock_panel_module.Panel = MockPanel
 sys.modules["rich.panel"] = mock_panel_module
 
 import bastardkb_build_releases as bkb
+import importlib
+importlib.reload(bkb)
 
 class TestUX(unittest.TestCase):
     def setUp(self):
@@ -76,7 +78,7 @@ class TestUX(unittest.TestCase):
             reporter.console = MagicMock()
 
             # Test Success Case
-            reporter.print_summary(10, 10)
+            reporter.print_summary(10, [])
             # Check if console.print was called with a Panel
             self.assertTrue(reporter.console.print.called)
             args, _ = reporter.console.print.call_args
@@ -87,10 +89,23 @@ class TestUX(unittest.TestCase):
             self.assertIn("Success", args[0].title)
 
             # Test Failure Case
-            reporter.print_summary(8, 10)
+            mock_firmware = MagicMock()
+            mock_firmware.__str__.return_value = "keyboard/variant:keymap"
+
+            reporter.print_summary(10, [mock_firmware, mock_firmware])
             args, _ = reporter.console.print.call_args
             self.assertIsInstance(args[0], MockPanel)
             self.assertIn("Build Completed with Errors", args[0].title)
+
+            # Verify that the firmware name is in the output
+            content = args[0].renderable
+            found = False
+            for call in content.append.call_args_list:
+                call_args, _ = call
+                if "keyboard/variant:keymap" in call_args[0]:
+                    found = True
+                    break
+            self.assertTrue(found, "Firmware name not found in summary panel")
 
     @patch("bastardkb_build_releases.RotatingFileHandler")
     def test_log_location_xdg(self, mock_handler):

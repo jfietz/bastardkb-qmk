@@ -26,6 +26,8 @@ sys.modules["rich.progress"] = MagicMock()
 sys.modules["rich.text"] = MagicMock()
 
 import bastardkb_build_releases as bkb
+import importlib
+importlib.reload(bkb)
 
 class TestPerformance(unittest.TestCase):
     def test_git_submodule_update_uses_jobs(self):
