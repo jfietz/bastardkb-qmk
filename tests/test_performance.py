@@ -1,7 +1,8 @@
+
 import unittest
 import sys
 import os
-from unittest.mock import MagicMock, patch
+from unittest.mock import MagicMock
 from pathlib import Path
 
 # Add root to sys.path
@@ -12,8 +13,11 @@ sys.modules["pygit2"] = MagicMock()
 sys.modules["rich"] = MagicMock()
 sys.modules["rich.console"] = MagicMock()
 sys.modules["rich.live"] = MagicMock()
-sys.modules["rich.panel"] = MagicMock()
+sys.modules["rich.progress"] = MagicMock()
+sys.modules["rich.text"] = MagicMock()
+
 # Mock Panel class specifically since it might be used with isinstance
+# Define MockPanel directly in the test file scope so it can be used consistently
 class MockPanel(MagicMock):
     def __init__(self, *args, **kwargs):
         super().__init__()
@@ -21,15 +25,18 @@ class MockPanel(MagicMock):
             self.renderable = args[0]
         for key, value in kwargs.items():
             setattr(self, key, value)
-sys.modules["rich.panel"].Panel = MockPanel
-sys.modules["rich.progress"] = MagicMock()
-sys.modules["rich.text"] = MagicMock()
+
+mock_panel_module = MagicMock()
+mock_panel_module.Panel = MockPanel
+sys.modules["rich.panel"] = mock_panel_module
 
 import bastardkb_build_releases as bkb
+# Force reload to ensure mocks are picked up
+import importlib
+importlib.reload(bkb)
 
 class TestPerformance(unittest.TestCase):
     def test_git_submodule_update_uses_jobs(self):
-        """Verify git submodule update uses --jobs argument."""
         # Setup mocks
         reporter = MagicMock()
         repository = MagicMock()
@@ -61,13 +68,13 @@ class TestPerformance(unittest.TestCase):
         for call in executor._run.call_args_list:
             args = call[0][0] # The first argument is the command tuple/list
             if len(args) >= 3 and args[:3] == ("git", "submodule", "update"):
-                git_submodule_call_args = args
+                # Check if the number of jobs follows --jobs
                 if "--jobs" in args:
-                    # Check if the number of jobs follows --jobs
                     try:
                         jobs_index = args.index("--jobs")
                         if str(parallel_jobs) == args[jobs_index + 1]:
                             found = True
+                            git_submodule_call_args = args
                     except (ValueError, IndexError):
                         pass
                 break
@@ -75,9 +82,7 @@ class TestPerformance(unittest.TestCase):
         self.assertTrue(found, f"git submodule update was not called with --jobs {parallel_jobs}. Called with: {git_submodule_call_args}")
 
     def test_total_firmware_count_reduce_callback_efficiency(self):
-        """Verify reduce callback works correctly (doesn't crash) without explicit list conversion."""
         # Mock FirmwareList
-        FirmwareList = MagicMock()
         firmware_list = MagicMock()
         # Mock configurations as a sequence (tuple)
         firmware_list.configurations = (1, 2, 3)
@@ -88,7 +93,6 @@ class TestPerformance(unittest.TestCase):
         self.assertEqual(result, 3)
 
     def test_qmk_compile_incremental(self):
-        """Verify qmk compile is called without --clean flag for incremental builds."""
         # Setup mocks
         reporter = MagicMock()
         repository = MagicMock()
