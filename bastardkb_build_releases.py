@@ -243,13 +243,21 @@ class Reporter(object):
         )
         self.logging.error(f"{title}: {message}")
 
-    def print_summary(self, success_count: int, total_count: int) -> None:
+    def print_summary(
+        self,
+        success_count: int,
+        total_count: int,
+        failed_firmwares: Optional[Sequence[str]] = None,
+    ) -> None:
         failed_count = total_count - success_count
 
         log_info = Text(f"\n\nLogs saved in: {self.app_log_dir}", style="dim")
 
         if failed_count == 0:
-            content = Text("All firmwares built successfully! 🎉", justify="center", style="bold green") + log_info
+            content = (
+                Text("All firmwares built successfully! 🎉", justify="center", style="bold green")
+                + log_info
+            )
             self.console.print(
                 Panel(
                     content,
@@ -259,7 +267,15 @@ class Reporter(object):
                 )
             )
         else:
-            content = Text(f"{success_count} built\n{failed_count} failed", justify="center") + log_info
+            content = (
+                Text(f"{success_count} built\n{failed_count} failed", justify="center")
+                + log_info
+            )
+            if failed_firmwares:
+                content.append("\n\nFailed firmwares:", style="bold red")
+                for firmware in failed_firmwares:
+                    content.append(f"\n- {firmware}", style="red")
+
             self.console.print(
                 Panel(
                     content,
@@ -412,15 +428,20 @@ def build(
 
     total_firmware_count = reduce(total_firmware_count_reduce_callback, firmwares, 0)
     built_firmware_count = 0
+    failed_firmwares: list[str] = []
     newline_task = empty_status.add_task("")
     overall_status_task = overall_status.add_task("Preparing…")
     overall_progress_task = overall_progress.add_task("", total=total_firmware_count)
-    reporter.set_progress_status(lambda message: overall_status.update(overall_status_task, description=message))
+    reporter.set_progress_status(
+        lambda message: overall_status.update(overall_status_task, description=message)
+    )
     reporter.info(f"Preparing to build {total_firmware_count} BastardKB firmwares")
     with Live(progress_group, console=reporter.console):
         for branch, configurations in firmwares:
             # Checkout branch.
-            reporter.info(f"  Building off branch [magenta]{branch}[/] ({len(configurations)} firmwares)")
+            reporter.info(
+                f"  Building off branch [magenta]{branch}[/] ({len(configurations)} firmwares)"
+            )
             worktree = executor.git_ensure_worktree(branch, update_submodules=True)
 
             # Build firmwares off that branch.
@@ -429,20 +450,24 @@ def build(
                 if completed_process.returncode == 0:
                     try:
                         on_firmware_compiled(
-                            worktree.path / read_firmware_filename_from_logs(firmware, completed_process.log_file)
+                            worktree.path
+                            / read_firmware_filename_from_logs(firmware, completed_process.log_file)
                         )
                         built_firmware_count += 1
                         reporter.info(f"    [not bold white]{firmware}[/] [green]ok[/]")
                     except FileNotFoundError:
                         reporter.warn(f"    [not bold white]{firmware}[/] [yellow]ok[/]")
                 else:
+                    failed_firmwares.append(str(firmware))
                     reporter.error(f"    [not bold white]{firmware}[/] [red]ko[/]")
                     reporter.error(f"Logs: {completed_process.log_file}")
                 overall_progress.update(overall_progress_task, advance=1)
             reporter.newline()
         overall_status.update(overall_status_task, visible=False)
         empty_status.update(newline_task, visible=False)
-        reporter.print_summary(built_firmware_count, total_firmware_count)
+        reporter.print_summary(
+            built_firmware_count, total_firmware_count, failed_firmwares
+        )
 
 
 def copy_firmware_to_output_dir(reporter: Reporter, output_dir: Path, firmware_path: Path):
