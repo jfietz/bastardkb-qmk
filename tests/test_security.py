@@ -1,3 +1,4 @@
+
 import sys
 import os
 import unittest
@@ -18,6 +19,8 @@ sys.modules["rich.progress"] = MagicMock()
 sys.modules["rich.text"] = MagicMock()
 
 import bastardkb_build_releases as bkb
+import importlib
+importlib.reload(bkb)
 
 class TestSecurity(unittest.TestCase):
     def setUp(self):
@@ -53,6 +56,33 @@ class TestSecurity(unittest.TestCase):
                 found = True
                 break
         self.assertTrue(found, "git submodule update was not called")
+
+    @patch("os.chmod")
+    @patch("os.makedirs")
+    @patch("bastardkb_build_releases.RotatingFileHandler")
+    @patch("bastardkb_build_releases.tempfile.mkdtemp")
+    def test_log_directory_permissions_enforced(self, mock_mkdtemp, mock_handler, mock_makedirs, mock_chmod):
+        # Setup mocks
+        mock_handler.return_value = MagicMock()
+        mock_handler.return_value.level = 0
+        mock_mkdtemp.return_value = "/tmp/mock_temp_dir"
+
+        # Initialize Reporter which triggers log directory setup
+        reporter = bkb.Reporter(verbose=False)
+
+        # Verify os.makedirs was called with correct mode
+        # Note: We can't easily check the path since it depends on environment,
+        # but we can check the mode.
+        self.assertTrue(mock_makedirs.called)
+        _, kwargs = mock_makedirs.call_args
+        self.assertEqual(kwargs.get('mode'), 0o700)
+
+        # Verify os.chmod was called to enforce permissions
+        # This is the critical security fix verification
+        self.assertTrue(mock_chmod.called)
+        args, _ = mock_chmod.call_args
+        # args[0] is the path, args[1] is the mode
+        self.assertEqual(args[1], 0o700)
 
 if __name__ == '__main__':
     unittest.main()
