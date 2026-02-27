@@ -5,6 +5,7 @@ import subprocess
 import re
 import tempfile
 import shutil
+import importlib
 from unittest.mock import MagicMock, patch
 
 # Add root to sys.path
@@ -36,6 +37,9 @@ class TestUX(unittest.TestCase):
         self.test_dir = tempfile.mkdtemp()
         self.old_xdg = os.environ.get("XDG_STATE_HOME")
         os.environ["XDG_STATE_HOME"] = self.test_dir
+
+        # Ensure we are testing with the mocks defined in this file
+        importlib.reload(bkb)
 
     def tearDown(self):
         shutil.rmtree(self.test_dir)
@@ -91,6 +95,51 @@ class TestUX(unittest.TestCase):
             args, _ = reporter.console.print.call_args
             self.assertIsInstance(args[0], MockPanel)
             self.assertIn("Build Completed with Errors", args[0].title)
+
+    def test_print_summary_with_failures(self):
+        """Verify print_summary lists failed firmwares."""
+        with patch("bastardkb_build_releases.RotatingFileHandler") as mock_handler:
+            mock_handler.return_value.level = 0
+            reporter = bkb.Reporter(verbose=False)
+            reporter.console = MagicMock()
+
+            failed_firmwares = ["keyboard/v2/elitec:default", "keyboard/blackpill:via"]
+            reporter.print_summary(8, 10, failed_firmwares=failed_firmwares)
+
+            args, _ = reporter.console.print.call_args
+            panel = args[0]
+
+            # The renderable should contain our failed firmwares
+            # We need to check if .append was called on the Text object or check the content
+            # Since we mocked rich.text.Text, we check the calls on the mock object if it's reused,
+            # BUT: in the code, `Text(...)` creates a NEW Text object.
+            # However, in our mock setup: `sys.modules["rich.text"] = MagicMock()`.
+            # So `Text` is `sys.modules["rich.text"].Text`.
+            # Each call to `Text(...)` returns a NEW mock instance by default unless configured otherwise.
+
+            # Let's inspect the Panel content.
+            # In our code: `content = Text(...) + log_info` then `content.append(...)`
+            # If Text is a Mock, `Text(...)` returns a Mock. `+` returns a Mock.
+            # `content.append` is a method call on that Mock.
+
+            # Since `panel.renderable` holds the content object passed to Panel
+            content_mock = panel.renderable
+
+            # Verify append calls
+            # We expect:
+            # 1. append("\n\nFailed firmwares:", style="bold red")
+            # 2. append("\n- keyboard/v2/elitec:default", style="red")
+            # 3. append("\n- keyboard/blackpill:via", style="red")
+
+            # We can check assert_has_calls
+            from unittest.mock import call
+            expected_calls = [
+                call("\n\nFailed firmwares:", style="bold red"),
+                call(f"\n- {failed_firmwares[0]}", style="red"),
+                call(f"\n- {failed_firmwares[1]}", style="red")
+            ]
+            content_mock.append.assert_has_calls(expected_calls, any_order=False)
+
 
     @patch("bastardkb_build_releases.RotatingFileHandler")
     def test_log_location_xdg(self, mock_handler):
