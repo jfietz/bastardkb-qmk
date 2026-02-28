@@ -243,7 +243,7 @@ class Reporter(object):
         )
         self.logging.error(f"{title}: {message}")
 
-    def print_summary(self, success_count: int, total_count: int) -> None:
+    def print_summary(self, success_count: int, total_count: int, failed_firmwares: Sequence[str] = None) -> None:
         failed_count = total_count - success_count
 
         log_info = Text(f"\n\nLogs saved in: {self.app_log_dir}", style="dim")
@@ -259,7 +259,12 @@ class Reporter(object):
                 )
             )
         else:
-            content = Text(f"{success_count} built\n{failed_count} failed", justify="center") + log_info
+            content = Text(f"{success_count} built\n{failed_count} failed", justify="center")
+            if failed_firmwares:
+                failed_text = "\n\nFailed firmwares:\n" + "\n".join(f"• {fw}" for fw in failed_firmwares)
+                content.append_text(Text(failed_text, style="red", justify="left"))
+            content = content + log_info
+
             self.console.print(
                 Panel(
                     content,
@@ -412,6 +417,7 @@ def build(
 
     total_firmware_count = reduce(total_firmware_count_reduce_callback, firmwares, 0)
     built_firmware_count = 0
+    failed_firmwares = []
     newline_task = empty_status.add_task("")
     overall_status_task = overall_status.add_task("Preparing…")
     overall_progress_task = overall_progress.add_task("", total=total_firmware_count)
@@ -434,15 +440,17 @@ def build(
                         built_firmware_count += 1
                         reporter.info(f"    [not bold white]{firmware}[/] [green]ok[/]")
                     except FileNotFoundError:
+                        failed_firmwares.append(str(firmware))
                         reporter.warn(f"    [not bold white]{firmware}[/] [yellow]ok[/]")
                 else:
+                    failed_firmwares.append(str(firmware))
                     reporter.error(f"    [not bold white]{firmware}[/] [red]ko[/]")
                     reporter.error(f"Logs: {completed_process.log_file}")
                 overall_progress.update(overall_progress_task, advance=1)
             reporter.newline()
         overall_status.update(overall_status_task, visible=False)
         empty_status.update(newline_task, visible=False)
-        reporter.print_summary(built_firmware_count, total_firmware_count)
+        reporter.print_summary(built_firmware_count, total_firmware_count, failed_firmwares)
 
 
 def copy_firmware_to_output_dir(reporter: Reporter, output_dir: Path, firmware_path: Path):

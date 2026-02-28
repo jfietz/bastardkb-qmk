@@ -9,3 +9,7 @@
 ## 2024-05-25 - [Respectful Logging]
 **Learning:** Cluttering the user's current working directory with log files creates friction and requires cleanup. Users expect tools to be "tidy" by default.
 **Action:** Use standard state directories (like XDG_STATE_HOME) for logs and only surface the location when necessary (e.g., on failure or in summary).
+
+## 2024-05-26 - [Actionable Error Summaries]
+**Learning:** Generic failure counts (e.g. "5 failed") in CLI build output force users to scroll back through extensive logs to find what went wrong. Explicitly listing the failed items directly within the failure summary provides immediate, actionable feedback.
+**Action:** When a build or task runner reports errors, always try to accumulate and explicitly list the failing targets in the final summary.

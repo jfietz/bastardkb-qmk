@@ -19,19 +19,24 @@ sys.modules["rich.progress"] = MagicMock()
 sys.modules["rich.text"] = MagicMock()
 
 # Custom Mock for Panel to support isinstance check
-class MockPanel:
-    def __init__(self, renderable, **kwargs):
-        self.renderable = renderable
-        self.title = kwargs.get("title", "")
+class MockPanel(MagicMock):
+    def __init__(self, *args, **kwargs):
+        super().__init__()
+        if args:
+            self.renderable = args[0]
+        for key, value in kwargs.items():
+            setattr(self, key, value)
 
 mock_panel_module = MagicMock()
 mock_panel_module.Panel = MockPanel
 sys.modules["rich.panel"] = mock_panel_module
 
 import bastardkb_build_releases as bkb
+import importlib
 
 class TestUX(unittest.TestCase):
     def setUp(self):
+        importlib.reload(bkb)
         # Create a fake home directory for XDG_STATE_HOME
         self.test_dir = tempfile.mkdtemp()
         self.old_xdg = os.environ.get("XDG_STATE_HOME")
@@ -87,10 +92,23 @@ class TestUX(unittest.TestCase):
             self.assertIn("Success", args[0].title)
 
             # Test Failure Case
-            reporter.print_summary(8, 10)
+            reporter.print_summary(8, 10, ["tbkmini:default", "skeletyl:via"])
             args, _ = reporter.console.print.call_args
             self.assertIsInstance(args[0], MockPanel)
             self.assertIn("Build Completed with Errors", args[0].title)
+
+            # Since the text is mock, we can check the calls to append_text
+            renderable_mock = args[0].renderable
+            # Verify the failed firmwares are formatted properly by inspecting Text calls.
+            # Since rich.text.Text is mocked, we inspect the arguments it was called with.
+            text_calls = sys.modules["rich.text"].Text.call_args_list
+            found = False
+            for call in text_calls:
+                text_content = call[0][0]
+                if "tbkmini:default" in text_content and "skeletyl:via" in text_content:
+                    found = True
+                    break
+            self.assertTrue(found, "Failed firmwares list not passed to Text object.")
 
     @patch("bastardkb_build_releases.RotatingFileHandler")
     def test_log_location_xdg(self, mock_handler):
