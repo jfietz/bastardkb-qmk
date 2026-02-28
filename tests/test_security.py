@@ -54,5 +54,24 @@ class TestSecurity(unittest.TestCase):
                 break
         self.assertTrue(found, "git submodule update was not called")
 
+    @patch("os.chmod")
+    @patch("bastardkb_build_releases.RotatingFileHandler")
+    def test_secure_log_directory_permissions(self, mock_handler, mock_chmod):
+        """Verify that the log directory explicitly has restricted permissions using os.chmod."""
+        # Configure mock handler level
+        mock_handler.return_value.level = 0
+
+        # We also need to patch os.environ and set a temp dir so it doesn't touch the real filesystem
+        import tempfile
+        with tempfile.TemporaryDirectory() as test_dir:
+            with patch.dict("os.environ", {"XDG_STATE_HOME": test_dir}):
+                reporter = bkb.Reporter(verbose=False)
+
+                # Verify os.chmod was called
+                self.assertTrue(mock_chmod.called, "os.chmod was not called")
+
+                # Verify it was called with the correct arguments (reporter.app_log_dir, 0o700)
+                mock_chmod.assert_any_call(reporter.app_log_dir, 0o700)
+
 if __name__ == '__main__':
     unittest.main()
