@@ -12,11 +12,11 @@ sys.path.append(os.path.abspath(os.path.join(os.path.dirname(__file__), '..')))
 
 # Mock dependencies before importing the module
 sys.modules["pygit2"] = MagicMock()
+
 sys.modules["rich"] = MagicMock()
 sys.modules["rich.console"] = MagicMock()
 sys.modules["rich.live"] = MagicMock()
 sys.modules["rich.progress"] = MagicMock()
-sys.modules["rich.text"] = MagicMock()
 
 # Custom Mock for Panel to support isinstance check
 class MockPanel:
@@ -29,6 +29,26 @@ mock_panel_module.Panel = MockPanel
 sys.modules["rich.panel"] = mock_panel_module
 
 import bastardkb_build_releases as bkb
+bkb.Panel = MockPanel
+
+# Patch the Text class locally instead of reloading the whole module or keeping real rich.text
+# because testing framework already expects it mocked in specific ways.
+class MockText:
+    def __init__(self, text, **kwargs):
+        self.text = text
+    def __add__(self, other):
+        if isinstance(other, MockText):
+            return MockText(self.text + other.text)
+        return MockText(self.text + str(other))
+    def append_text(self, other):
+        if isinstance(other, MockText):
+            self.text += other.text
+        else:
+            self.text += str(other)
+    def __str__(self):
+        return self.text
+
+bkb.Text = MockText
 
 class TestUX(unittest.TestCase):
     def setUp(self):
@@ -83,14 +103,15 @@ class TestUX(unittest.TestCase):
             self.assertTrue(len(args) > 0)
 
             # Use the MockPanel class we defined
-            self.assertIsInstance(args[0], MockPanel)
+            self.assertEqual(args[0].__class__.__name__, 'MockPanel')
             self.assertIn("Success", args[0].title)
 
             # Test Failure Case
-            reporter.print_summary(8, 10)
+            reporter.print_summary(8, 10, ["keyboard/mcu:default"])
             args, _ = reporter.console.print.call_args
-            self.assertIsInstance(args[0], MockPanel)
+            self.assertEqual(args[0].__class__.__name__, 'MockPanel')
             self.assertIn("Build Completed with Errors", args[0].title)
+            self.assertIn("keyboard/mcu:default", str(args[0].renderable))
 
     @patch("bastardkb_build_releases.RotatingFileHandler")
     def test_log_location_xdg(self, mock_handler):
