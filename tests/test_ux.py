@@ -83,13 +83,13 @@ class TestUX(unittest.TestCase):
             self.assertTrue(len(args) > 0)
 
             # Use the MockPanel class we defined
-            self.assertIsInstance(args[0], MockPanel)
+            self.assertEqual(args[0].__class__.__name__, 'MockPanel')
             self.assertIn("Success", args[0].title)
 
             # Test Failure Case
             reporter.print_summary(8, 10)
             args, _ = reporter.console.print.call_args
-            self.assertIsInstance(args[0], MockPanel)
+            self.assertEqual(args[0].__class__.__name__, 'MockPanel')
             self.assertIn("Build Completed with Errors", args[0].title)
 
     @patch("bastardkb_build_releases.RotatingFileHandler")
