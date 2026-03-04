@@ -1,6 +1,8 @@
 import sys
 import os
 import unittest
+import tempfile
+import stat
 from unittest.mock import MagicMock, patch
 from pathlib import Path
 import subprocess
@@ -53,6 +55,27 @@ class TestSecurity(unittest.TestCase):
                 found = True
                 break
         self.assertTrue(found, "git submodule update was not called")
+
+    @patch("bastardkb_build_releases.RotatingFileHandler")
+    def test_app_log_dir_permissions_are_enforced_on_existing_dir(self, mock_handler):
+        # Configure the mock handler
+        mock_handler.return_value.level = 0
+
+        with tempfile.TemporaryDirectory() as td:
+            # Pre-create the log directory with permissive permissions (e.g., 0o777)
+            app_log_dir = os.path.join(td, "bastardkb-qmk")
+            os.makedirs(app_log_dir)
+            os.chmod(app_log_dir, 0o777)
+
+            with patch.dict(os.environ, {"XDG_STATE_HOME": td}):
+                # Initialize reporter
+                reporter = bkb.Reporter(verbose=False)
+
+                # Verify that permissions were restricted to 0o700
+                st = os.stat(app_log_dir)
+                perms = stat.S_IMODE(st.st_mode)
+                self.assertEqual(perms, 0o700, f"Expected 0o700 permissions, got {oct(perms)}")
+
 
 if __name__ == '__main__':
     unittest.main()
