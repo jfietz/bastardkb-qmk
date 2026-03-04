@@ -16,7 +16,26 @@ sys.modules["rich"] = MagicMock()
 sys.modules["rich.console"] = MagicMock()
 sys.modules["rich.live"] = MagicMock()
 sys.modules["rich.progress"] = MagicMock()
-sys.modules["rich.text"] = MagicMock()
+
+class MockText:
+    def __init__(self, text="", **kwargs):
+        self.text = text
+    def append(self, text, **kwargs):
+        self.text += text
+    def __add__(self, other):
+        if hasattr(other, 'text'):
+            return MockText(self.text + other.text)
+        return MockText(self.text + str(other))
+    def __str__(self):
+        return self.text
+
+mock_text_module = MagicMock()
+mock_text_module.Text = MockText
+sys.modules["rich.text"] = mock_text_module
+
+import importlib
+# import bastardkb_build_releases explicitly so it picks up the mocked rich.text
+# importlib.reload(bastardkb_build_releases)
 
 # Custom Mock for Panel to support isinstance check
 class MockPanel:
@@ -29,6 +48,7 @@ mock_panel_module.Panel = MockPanel
 sys.modules["rich.panel"] = mock_panel_module
 
 import bastardkb_build_releases as bkb
+importlib.reload(bkb)
 
 class TestUX(unittest.TestCase):
     def setUp(self):
@@ -83,14 +103,25 @@ class TestUX(unittest.TestCase):
             self.assertTrue(len(args) > 0)
 
             # Use the MockPanel class we defined
-            self.assertIsInstance(args[0], MockPanel)
+            self.assertEqual(args[0].__class__.__name__, 'MockPanel')
             self.assertIn("Success", args[0].title)
 
             # Test Failure Case
-            reporter.print_summary(8, 10)
+            mock_failed_firmwares = [
+                bkb.Firmware(keyboard="scylla", keymap="via"),
+                bkb.Firmware(keyboard="skeletyl", keymap="default"),
+            ]
+            reporter.print_summary(8, 10, failed_firmwares=mock_failed_firmwares)
             args, _ = reporter.console.print.call_args
-            self.assertIsInstance(args[0], MockPanel)
+            self.assertEqual(args[0].__class__.__name__, 'MockPanel')
             self.assertIn("Build Completed with Errors", args[0].title)
+
+            # Use str() on renderable since it is a mock string or object
+            # Our bkb.Firmware string output uses {keyboard}:{keymap}
+            renderable_str = str(args[0].renderable)
+            self.assertIn("Failed firmwares:", renderable_str)
+            self.assertIn("scylla:via", renderable_str)
+            self.assertIn("skeletyl:default", renderable_str)
 
     @patch("bastardkb_build_releases.RotatingFileHandler")
     def test_log_location_xdg(self, mock_handler):
