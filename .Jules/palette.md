@@ -9,3 +9,7 @@
 ## 2024-05-25 - [Respectful Logging]
 **Learning:** Cluttering the user's current working directory with log files creates friction and requires cleanup. Users expect tools to be "tidy" by default.
 **Action:** Use standard state directories (like XDG_STATE_HOME) for logs and only surface the location when necessary (e.g., on failure or in summary).
+
+## 2024-05-26 - [Batch Operation Error Visibility]
+**Learning:** UX guidelines for CLI tools dictate that batch operations should aggregate and list specific failed items in the final summary output to prevent users from having to scroll up through extensive logs.
+**Action:** When a batch process has failures, always list the failed item names (e.g. firmwares) in the final summary.
