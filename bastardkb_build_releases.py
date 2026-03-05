@@ -452,6 +452,9 @@ def copy_firmware_to_output_dir(reporter: Reporter, output_dir: Path, firmware_p
         target = output_dir / firmware_path.name
         if firmware_path != target:
             reporter.logging.debug(f"copy: {firmware_path} -> {target}")
+            # Security: Prevent symlink overwrite attack by removing existing target or symlink
+            if target.exists() or target.is_symlink():
+                target.unlink()
             firmware_path.rename(target)
         else:
             reporter.logging.debug(f"firmware already at {firmware_path}")
@@ -478,7 +481,11 @@ def copy_assets_to_output_dir(executor: Executor, reporter: Reporter, output_dir
     for src in via_json_list:
         dst = output_dir / src.name
         if not executor.dry_run:
-            shutil.copyfile(src, dst)
+            if src != dst:
+                # Security: Prevent symlink overwrite attack by removing existing target or symlink
+                if dst.exists() or dst.is_symlink():
+                    dst.unlink()
+                shutil.copyfile(src, dst)
         reporter.info(f"    [not bold white]{src.name}[/] [green]ok[/]")
         reporter.logging.debug(f"copy: {src} -> {dst}")
 
