@@ -486,6 +486,9 @@ def copy_assets_to_output_dir(executor: Executor, reporter: Reporter, output_dir
     for src in via_json_list:
         dst = output_dir / src.name
         if not executor.dry_run:
+            # Explicitly remove pre-existing symlinks/files to prevent arbitrary file overwrite attacks
+            if dst.exists() or dst.is_symlink():
+                dst.unlink()
             shutil.copyfile(src, dst)
         reporter.info(f"    [not bold white]{src.name}[/] [green]ok[/]")
         reporter.logging.debug(f"copy: {src} -> {dst}")
