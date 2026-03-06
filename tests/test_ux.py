@@ -6,6 +6,7 @@ import re
 import tempfile
 import shutil
 from unittest.mock import MagicMock, patch
+import importlib
 
 # Add root to sys.path
 sys.path.append(os.path.abspath(os.path.join(os.path.dirname(__file__), '..')))
@@ -16,7 +17,24 @@ sys.modules["rich"] = MagicMock()
 sys.modules["rich.console"] = MagicMock()
 sys.modules["rich.live"] = MagicMock()
 sys.modules["rich.progress"] = MagicMock()
-sys.modules["rich.text"] = MagicMock()
+
+class MockText:
+    def __init__(self, text="", style=None, justify=None):
+        self.text = str(text)
+    def append(self, text, style=None):
+        self.text += str(text)
+        return self
+    def append_text(self, text_obj):
+        self.text += str(text_obj)
+        return self
+    def __add__(self, other):
+        return MockText(self.text + str(other))
+    def __str__(self):
+        return self.text
+
+mock_text_module = __import__("unittest.mock").mock.MagicMock()
+mock_text_module.Text = MockText
+sys.modules["rich.text"] = mock_text_module
 
 # Custom Mock for Panel to support isinstance check
 class MockPanel:
@@ -29,6 +47,7 @@ mock_panel_module.Panel = MockPanel
 sys.modules["rich.panel"] = mock_panel_module
 
 import bastardkb_build_releases as bkb
+importlib.reload(bkb)
 
 class TestUX(unittest.TestCase):
     def setUp(self):
@@ -76,7 +95,7 @@ class TestUX(unittest.TestCase):
             reporter.console = MagicMock()
 
             # Test Success Case
-            reporter.print_summary(10, 10)
+            reporter.print_summary(10, 10, [])
             # Check if console.print was called with a Panel
             self.assertTrue(reporter.console.print.called)
             args, _ = reporter.console.print.call_args
@@ -87,10 +106,18 @@ class TestUX(unittest.TestCase):
             self.assertIn("Success", args[0].title)
 
             # Test Failure Case
-            reporter.print_summary(8, 10)
+            fw1 = MagicMock()
+            fw1.__str__.return_value = "kb1:keymap1"
+            fw2 = MagicMock()
+            fw2.__str__.return_value = "kb2:keymap2"
+            reporter.print_summary(8, 10, [fw1, fw2])
             args, _ = reporter.console.print.call_args
             self.assertEqual(args[0].__class__.__name__, 'MockPanel')
             self.assertIn("Build Completed with Errors", args[0].title)
+            # Make sure failed firmwares are listed in the summary
+            renderable_str = str(args[0].renderable)
+            self.assertIn("kb1:keymap1", renderable_str)
+            self.assertIn("kb2:keymap2", renderable_str)
 
     @patch("bastardkb_build_releases.RotatingFileHandler")
     def test_log_location_xdg(self, mock_handler):
