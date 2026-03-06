@@ -13,3 +13,7 @@
 ## 2024-05-26 - [Batch Operation Error Visibility]
 **Learning:** UX guidelines for CLI tools dictate that batch operations should aggregate and list specific failed items in the final summary output to prevent users from having to scroll up through extensive logs.
 **Action:** When a batch process has failures, always list the failed item names (e.g. firmwares) in the final summary.
+
+## 2024-05-27 - [Missing Dependency Error Visibility]
+**Learning:** Checking for necessary external dependencies (like `git` and `qmk`) proactively and displaying a nicely formatted `reporter.fatal()` message telling the user to install them and add them to their PATH is a significant UX improvement over simply failing with a Python `FileNotFoundError` stack trace during execution.
+**Action:** Validate critical external CLI command dependencies at script startup and handle missing tools gracefully using styled panels instead of raw stack traces.

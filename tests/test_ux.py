@@ -139,5 +139,37 @@ class TestUX(unittest.TestCase):
             self.assertTrue(filename.startswith(expected_dir),
                             f"Log file {filename} is not in {expected_dir}")
 
+    @patch("sys.argv", ["bastardkb_build_releases.py", "--dry-run"])
+    @patch("shutil.which")
+    @patch("sys.exit")
+    def test_missing_dependencies_fatal_error(self, mock_exit, mock_which):
+        """Verify that a missing dependency triggers a styled fatal error panel."""
+        # Setup the mock so that 'qmk' or 'git' is not found
+        mock_which.return_value = None
+
+        # We also need to patch Repository because main() tries to load the repo
+        # before checking dependencies. Oh wait, the check is before repository.
+        # Let's verify.
+
+        # We need sys.exit to raise an exception so execution stops like it normally would,
+        # otherwise main() keeps executing after the first sys.exit(1) call.
+        mock_exit.side_effect = SystemExit(1)
+
+        with patch("bastardkb_build_releases.Reporter.fatal") as mock_fatal:
+            with self.assertRaises(SystemExit):
+                bkb.main()
+
+            # Verify that the fatal method was called on the reporter
+            self.assertTrue(mock_fatal.called)
+
+            # Verify the call contained the expected title and message styling
+            args, kwargs = mock_fatal.call_args
+            self.assertIn("Missing Dependency", kwargs.get("title", ""))
+            self.assertIn("[bold]", args[0])
+            self.assertIn("could not be found", args[0])
+
+            # verify exit was called
+            mock_exit.assert_called_once_with(1)
+
 if __name__ == '__main__':
     unittest.main()
