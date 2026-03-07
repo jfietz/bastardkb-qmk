@@ -172,10 +172,11 @@ ALL_FIRMWARES: Sequence[FirmwareList] = (
 
 
 class Reporter(object):
-    def __init__(self, verbose: bool):
+    def __init__(self, verbose: bool, dry_run: bool = False):
         self.console = Console()
         self.logging = logging.getLogger()
         self.verbose = verbose
+        self.dry_run = dry_run
 
         # Logging setup.
         xdg_state_home = os.environ.get("XDG_STATE_HOME", os.path.join(os.path.expanduser("~"), ".local", "state"))
@@ -251,15 +252,26 @@ class Reporter(object):
         log_info = Text(f"\n\nLogs saved in: {self.app_log_dir}", style="dim")
 
         if failed_count == 0:
-            content = Text("All firmwares built successfully! 🎉", justify="center", style="bold green") + log_info
-            self.console.print(
-                Panel(
-                    content,
-                    title="[bold green]Success[/bold green]",
-                    border_style="green",
-                    padding=(1, 2),
+            if self.dry_run:
+                content = Text("Dry run completed successfully! 🚀", justify="center", style="bold blue") + log_info
+                self.console.print(
+                    Panel(
+                        content,
+                        title="[bold blue]Dry Run Success[/bold blue]",
+                        border_style="blue",
+                        padding=(1, 2),
+                    )
                 )
-            )
+            else:
+                content = Text("All firmwares built successfully! 🎉", justify="center", style="bold green") + log_info
+                self.console.print(
+                    Panel(
+                        content,
+                        title="[bold green]Success[/bold green]",
+                        border_style="green",
+                        padding=(1, 2),
+                    )
+                )
         else:
             content = Text(f"{success_count} built\n{failed_count} failed\n", justify="center")
             if failed_firmwares:
@@ -440,10 +452,17 @@ def build(
                             worktree.path / read_firmware_filename_from_logs(firmware, completed_process.log_file)
                         )
                         built_firmware_count += 1
-                        reporter.info(f"    [not bold white]{firmware}[/] [green]ok[/]")
+                        if executor.dry_run:
+                            reporter.info(f"    [not bold white]{firmware}[/] [blue]dry-run[/]")
+                        else:
+                            reporter.info(f"    [not bold white]{firmware}[/] [green]ok[/]")
                     except FileNotFoundError:
-                        reporter.warn(f"    [not bold white]{firmware}[/] [yellow]ok[/]")
-                        failed_firmwares.append(firmware)
+                        if executor.dry_run:
+                            built_firmware_count += 1
+                            reporter.info(f"    [not bold white]{firmware}[/] [blue]dry-run[/]")
+                        else:
+                            reporter.warn(f"    [not bold white]{firmware}[/] [yellow]ok[/]")
+                            failed_firmwares.append(firmware)
                 else:
                     reporter.error(f"    [not bold white]{firmware}[/] [red]ko[/]")
                     reporter.error(f"Logs: {completed_process.log_file}")
@@ -539,7 +558,7 @@ def main() -> None:
         default=".*",
     )
     cmdline_args = parser.parse_args()
-    reporter = Reporter(cmdline_args.verbose)
+    reporter = Reporter(cmdline_args.verbose, cmdline_args.dry_run)
 
     # Install SIGINT handler.
     signal.signal(signal.SIGINT, partial(sigint_handler, reporter))

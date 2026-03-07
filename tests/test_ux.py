@@ -105,6 +105,15 @@ class TestUX(unittest.TestCase):
             self.assertEqual(args[0].__class__.__name__, 'MockPanel')
             self.assertIn("Success", args[0].title)
 
+            # Test Dry Run Success Case
+            reporter_dry = bkb.Reporter(verbose=False, dry_run=True)
+            reporter_dry.console = MagicMock()
+            reporter_dry.print_summary(10, 10, [])
+            self.assertTrue(reporter_dry.console.print.called)
+            args_dry, _ = reporter_dry.console.print.call_args
+            self.assertEqual(args_dry[0].__class__.__name__, 'MockPanel')
+            self.assertIn("Dry Run Success", args_dry[0].title)
+
             # Test Failure Case
             fw1 = MagicMock()
             fw1.__str__.return_value = "kb1:keymap1"
