@@ -80,14 +80,14 @@ class TestUX(unittest.TestCase):
 
     def test_print_summary_exists(self):
         """Verify Reporter has print_summary method."""
-        with patch("bastardkb_build_releases.RotatingFileHandler") as mock_handler:
+        with patch("bastardkb_build_releases.SecureRotatingFileHandler") as mock_handler:
             mock_handler.return_value.level = 0
             reporter = bkb.Reporter(verbose=False)
         self.assertTrue(hasattr(reporter, "print_summary"), "Reporter missing print_summary method")
 
     def test_print_summary_behavior(self):
         """Verify print_summary prints a Panel."""
-        with patch("bastardkb_build_releases.RotatingFileHandler") as mock_handler:
+        with patch("bastardkb_build_releases.SecureRotatingFileHandler") as mock_handler:
              # Configure mock handler level
             mock_handler.return_value.level = 0
 
@@ -119,7 +119,7 @@ class TestUX(unittest.TestCase):
             self.assertIn("kb1:keymap1", renderable_str)
             self.assertIn("kb2:keymap2", renderable_str)
 
-    @patch("bastardkb_build_releases.RotatingFileHandler")
+    @patch("bastardkb_build_releases.SecureRotatingFileHandler")
     def test_log_location_xdg(self, mock_handler):
         # Configure the mock handler instance to have a proper level
         mock_instance = mock_handler.return_value

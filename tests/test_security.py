@@ -56,7 +56,7 @@ class TestSecurity(unittest.TestCase):
                 break
         self.assertTrue(found, "git submodule update was not called")
 
-    @patch("bastardkb_build_releases.RotatingFileHandler")
+    @patch("bastardkb_build_releases.SecureRotatingFileHandler")
     def test_app_log_dir_permissions_are_enforced_on_existing_dir(self, mock_handler):
         # Configure the mock handler
         mock_handler.return_value.level = 0
@@ -110,6 +110,36 @@ class TestSecurity(unittest.TestCase):
             # Assert the destination is no longer a symlink and contains the copied content
             self.assertFalse(dst.is_symlink())
             self.assertEqual(dst.read_text(), "via config content")
+
+    def test_secure_log_rotation_permissions(self):
+        with tempfile.TemporaryDirectory() as td:
+            log_file = os.path.join(td, "test.log")
+
+            # Create a SecureRotatingFileHandler
+            handler = bkb.SecureRotatingFileHandler(
+                filename=log_file,
+                maxBytes=100,
+                backupCount=2,
+            )
+
+            import logging
+            logger = logging.getLogger("test_rotation")
+            logger.addHandler(handler)
+            logger.setLevel(logging.DEBUG)
+
+            # Write enough logs to trigger rotation
+            for i in range(10):
+                logger.debug(f"This is log message {i} " * 5)
+
+            # Verify the current log file has 0600 permissions
+            st2 = os.stat(log_file)
+            perms2 = stat.S_IMODE(st2.st_mode)
+            self.assertEqual(perms2, 0o600, f"Expected 0o600 permissions, got {oct(perms2)}")
+
+            # Verify the rotated log file also has 0600 permissions
+            st_rotated = os.stat(log_file + ".1")
+            perms_rotated = stat.S_IMODE(st_rotated.st_mode)
+            self.assertEqual(perms_rotated, 0o600, f"Expected 0o600 permissions, got {oct(perms_rotated)}")
 
 
 if __name__ == '__main__':
