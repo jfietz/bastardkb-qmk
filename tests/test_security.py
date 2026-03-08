@@ -56,7 +56,7 @@ class TestSecurity(unittest.TestCase):
                 break
         self.assertTrue(found, "git submodule update was not called")
 
-    @patch("bastardkb_build_releases.RotatingFileHandler")
+    @patch("bastardkb_build_releases.SecureRotatingFileHandler")
     def test_app_log_dir_permissions_are_enforced_on_existing_dir(self, mock_handler):
         # Configure the mock handler
         mock_handler.return_value.level = 0
