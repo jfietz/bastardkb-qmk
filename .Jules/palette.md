@@ -17,3 +17,7 @@
 ## 2024-05-27 - [Missing Dependency Error Visibility]
 **Learning:** Checking for necessary external dependencies (like `git` and `qmk`) proactively and displaying a nicely formatted `reporter.fatal()` message telling the user to install them and add them to their PATH is a significant UX improvement over simply failing with a Python `FileNotFoundError` stack trace during execution.
 **Action:** Validate critical external CLI command dependencies at script startup and handle missing tools gracefully using styled panels instead of raw stack traces.
+
+## 2024-05-28 - [Dry Run Output Differentiation]
+**Learning:** Users can easily confuse the output of a `--dry-run` flag with an actual execution if the UI uses the exact same success indicators (e.g., green checkmarks and identical "Success" text). This can lead to false confidence that actions were taken.
+**Action:** When a CLI tool simulates an action, visually differentiate the output from a real execution by changing the color palette (e.g., using blue instead of green) and altering the text to explicitly state it was a simulation.
