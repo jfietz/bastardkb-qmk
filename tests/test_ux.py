@@ -119,6 +119,32 @@ class TestUX(unittest.TestCase):
             self.assertIn("kb1:keymap1", renderable_str)
             self.assertIn("kb2:keymap2", renderable_str)
 
+    def test_print_summary_dry_run_behavior(self):
+        """Verify print_summary changes output when dry_run=True."""
+        with patch("bastardkb_build_releases.RotatingFileHandler") as mock_handler:
+            mock_handler.return_value.level = 0
+
+            reporter = bkb.Reporter(verbose=False, dry_run=True)
+            reporter.console = MagicMock()
+
+            # Test Success Case (success_count=10, total_count=10 means failed_count=0)
+            reporter.print_summary(10, 10, [])
+            args, _ = reporter.console.print.call_args
+            self.assertEqual(args[0].__class__.__name__, 'MockPanel')
+            self.assertIn("Dry Run Completed", args[0].title)
+            renderable_str = str(args[0].renderable)
+            self.assertIn("simulated successfully", renderable_str)
+
+            # Test Failure Case (success_count=8, total_count=10 means failed_count=2)
+            fw1 = MagicMock()
+            fw1.__str__.return_value = "kb1:keymap1"
+            reporter.print_summary(8, 10, [fw1])
+            args, _ = reporter.console.print.call_args
+            self.assertEqual(args[0].__class__.__name__, 'MockPanel')
+            self.assertIn("Dry Run Completed with Errors", args[0].title)
+            renderable_str = str(args[0].renderable)
+            self.assertIn("simulated", renderable_str)
+
     @patch("bastardkb_build_releases.RotatingFileHandler")
     def test_log_location_xdg(self, mock_handler):
         # Configure the mock handler instance to have a proper level
