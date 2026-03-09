@@ -17,3 +17,7 @@
 ## 2024-05-27 - [Missing Dependency Error Visibility]
 **Learning:** Checking for necessary external dependencies (like `git` and `qmk`) proactively and displaying a nicely formatted `reporter.fatal()` message telling the user to install them and add them to their PATH is a significant UX improvement over simply failing with a Python `FileNotFoundError` stack trace during execution.
 **Action:** Validate critical external CLI command dependencies at script startup and handle missing tools gracefully using styled panels instead of raw stack traces.
+
+## 2024-05-28 - [Dry Run Feedback Visibility]
+**Learning:** When using `--dry-run` or similar simulation flags, outputting the standard "Success" or "Built" messaging causes cognitive dissonance and momentary user panic, wondering if the operation actually executed.
+**Action:** Clearly differentiate simulated success from actual success in the final summary. Use distinct colors (e.g., blue for dry run vs. green for real) and explicit wording like "simulated" instead of "built".
