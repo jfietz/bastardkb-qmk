@@ -172,10 +172,11 @@ ALL_FIRMWARES: Sequence[FirmwareList] = (
 
 
 class Reporter(object):
-    def __init__(self, verbose: bool):
+    def __init__(self, verbose: bool, dry_run: bool = False):
         self.console = Console()
         self.logging = logging.getLogger()
         self.verbose = verbose
+        self.dry_run = dry_run
 
         # Logging setup.
         xdg_state_home = os.environ.get("XDG_STATE_HOME", os.path.join(os.path.expanduser("~"), ".local", "state"))
@@ -251,17 +252,29 @@ class Reporter(object):
         log_info = Text(f"\n\nLogs saved in: {self.app_log_dir}", style="dim")
 
         if failed_count == 0:
-            content = Text("All firmwares built successfully! 🎉", justify="center", style="bold green") + log_info
-            self.console.print(
-                Panel(
-                    content,
-                    title="[bold green]Success[/bold green]",
-                    border_style="green",
-                    padding=(1, 2),
+            if self.dry_run:
+                content = Text("All firmwares simulated successfully! 🎉", justify="center", style="bold blue") + log_info
+                self.console.print(
+                    Panel(
+                        content,
+                        title="[bold blue]Dry Run Success[/bold blue]",
+                        border_style="blue",
+                        padding=(1, 2),
+                    )
                 )
-            )
+            else:
+                content = Text("All firmwares built successfully! 🎉", justify="center", style="bold green") + log_info
+                self.console.print(
+                    Panel(
+                        content,
+                        title="[bold green]Success[/bold green]",
+                        border_style="green",
+                        padding=(1, 2),
+                    )
+                )
         else:
-            content = Text(f"{success_count} built\n{failed_count} failed\n", justify="center")
+            action_word = "simulated" if self.dry_run else "built"
+            content = Text(f"{success_count} {action_word}\n{failed_count} failed\n", justify="center")
             if failed_firmwares:
                 content.append("\nFailed Firmwares:\n", style="bold red")
                 for fw in failed_firmwares:
@@ -502,7 +515,10 @@ def sigint_handler(reporter: Reporter, signal, frame):
 
 def main() -> None:
     # Parse command line arguments.
-    parser = argparse.ArgumentParser(description="Create Bastard Keyboard firmware release.")
+    parser = argparse.ArgumentParser(
+        description="Create Bastard Keyboard firmware release.",
+        formatter_class=argparse.ArgumentDefaultsHelpFormatter,
+    )
     parser.add_argument(
         "-n",
         "--dry-run",
@@ -539,7 +555,7 @@ def main() -> None:
         default=".*",
     )
     cmdline_args = parser.parse_args()
-    reporter = Reporter(cmdline_args.verbose)
+    reporter = Reporter(cmdline_args.verbose, cmdline_args.dry_run)
 
     # Install SIGINT handler.
     signal.signal(signal.SIGINT, partial(sigint_handler, reporter))
