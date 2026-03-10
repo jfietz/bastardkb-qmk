@@ -56,7 +56,60 @@ class TestSecurity(unittest.TestCase):
                 break
         self.assertTrue(found, "git submodule update was not called")
 
-    @patch("bastardkb_build_releases.RotatingFileHandler")
+    def test_secure_rotating_file_handler_maintains_permissions(self):
+        with tempfile.TemporaryDirectory() as td:
+            log_file = os.path.join(td, "test.log")
+
+            # Start with a permissive umask
+            old_umask = os.umask(0o022)
+            try:
+                # Create handler with small maxBytes to easily trigger rotation
+                handler = bkb.SecureRotatingFileHandler(
+                    filename=log_file,
+                    maxBytes=100,
+                    backupCount=2
+                )
+
+                # Check initial file permissions
+                st_initial = os.stat(log_file)
+                perms_initial = stat.S_IMODE(st_initial.st_mode)
+                self.assertEqual(perms_initial, 0o600, f"Expected initial log to have 0o600, got {oct(perms_initial)}")
+
+                # Write enough data to trigger rotation
+                import logging
+                record = logging.LogRecord(
+                    name="test",
+                    level=logging.INFO,
+                    pathname="",
+                    lineno=0,
+                    msg="A" * 150,
+                    args=(),
+                    exc_info=None
+                )
+                # Need a formatter to format the record
+                handler.setFormatter(logging.Formatter('%(message)s'))
+                handler.emit(record)
+
+                # Emit a second record to actually trigger the rotation
+                # (the first write might just fill it up to maxBytes)
+                handler.emit(record)
+
+                # Check rotated file permissions
+                st_rotated = os.stat(log_file + ".1")
+                perms_rotated = stat.S_IMODE(st_rotated.st_mode)
+                self.assertEqual(perms_rotated, 0o600, f"Expected rotated log to have 0o600, got {oct(perms_rotated)}")
+
+                # Check new active file permissions
+                st_new = os.stat(log_file)
+                perms_new = stat.S_IMODE(st_new.st_mode)
+                self.assertEqual(perms_new, 0o600, f"Expected new active log to have 0o600, got {oct(perms_new)}")
+
+            finally:
+                os.umask(old_umask)
+                if 'handler' in locals():
+                    handler.close()
+
+    @patch("bastardkb_build_releases.SecureRotatingFileHandler")
     def test_app_log_dir_permissions_are_enforced_on_existing_dir(self, mock_handler):
         # Configure the mock handler
         mock_handler.return_value.level = 0

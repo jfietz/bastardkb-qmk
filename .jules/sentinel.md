@@ -12,3 +12,8 @@
 **Vulnerability:** Insecure file copy operation with `shutil.copyfile(src, dst)`. If `dst` already exists as a symbolic link pointing to a sensitive file, `shutil.copyfile` will resolve the symlink and overwrite the target file with the source file contents.
 **Learning:** Python's `shutil.copyfile` follows symlinks at the destination path by default. If the destination directory is attacker-controllable (e.g., world-writable or shared), they can pre-create symlinks pointing to sensitive files (like `/etc/passwd` or ssh keys) and the script will blindly overwrite them.
 **Prevention:** Always verify if the destination path is a symlink or exists before copying. Use `if dst.exists() or dst.is_symlink(): dst.unlink()` to explicitly remove any pre-existing symlinks or files before copying into that path.
+
+## 2024-05-19 - Insecure Log Rotation Permissions
+**Vulnerability:** `RotatingFileHandler` created new rotated log files using the default system umask, meaning rotated logs could have permissive permissions (e.g., 0644) even if the original log file was securely created with 0600 permissions.
+**Learning:** Python's standard library logging handlers like `RotatingFileHandler` do not inherit or enforce the original file's permissions when creating new files during rotation. The `_open()` method relies on the environment's current umask.
+**Prevention:** Subclass standard logging handlers (e.g., `SecureRotatingFileHandler`) and override the `_open()` method to explicitly set `os.umask(0o077)` before calling `super()._open()`, ensuring all created and rotated files maintain strict permissions.

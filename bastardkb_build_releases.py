@@ -51,6 +51,16 @@ class Firmware(NamedTuple):
         return f"{self.keyboard}:{self.keymap}"
 
 
+class SecureRotatingFileHandler(RotatingFileHandler):
+    """A RotatingFileHandler that enforces strict permissions on created logs."""
+    def _open(self):
+        # Override _open to ensure the file is created with 0600 permissions
+        old_umask = os.umask(0o077)
+        try:
+            return super()._open()
+        finally:
+            os.umask(old_umask)
+
 class FirmwareList(NamedTuple):
     branch: str
     configurations: Sequence[Firmware]
@@ -187,16 +197,12 @@ class Reporter(object):
         log_file = os.path.join(self.app_log_dir, "bastardkb_build_releases.log")
 
         # Create log file with restricted permissions (0600)
-        old_umask = os.umask(0o077)
-        try:
-            logging_file_handler = RotatingFileHandler(
-                filename=log_file,
-                encoding="utf-8",
-                maxBytes=1024 * 1024,
-                backupCount=5,
-            )
-        finally:
-            os.umask(old_umask)
+        logging_file_handler = SecureRotatingFileHandler(
+            filename=log_file,
+            encoding="utf-8",
+            maxBytes=1024 * 1024,
+            backupCount=5,
+        )
 
         logging_file_handler.setFormatter(logging.Formatter(fmt="%(asctime)s %(levelname)s %(message)s"))
         self.logging.addHandler(logging_file_handler)
