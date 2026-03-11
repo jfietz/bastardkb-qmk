@@ -76,6 +76,45 @@ class TestSecurity(unittest.TestCase):
                 perms = stat.S_IMODE(st.st_mode)
                 self.assertEqual(perms, 0o700, f"Expected 0o700 permissions, got {oct(perms)}")
 
+    def test_secure_rotating_file_handler_permissions(self):
+        import logging
+        with tempfile.TemporaryDirectory() as td:
+            log_file = os.path.join(td, "test.log")
+
+            # Use small maxBytes so we trigger rotation easily
+            handler = bkb.SecureRotatingFileHandler(
+                filename=log_file,
+                maxBytes=100,
+                backupCount=2,
+            )
+
+            logger = logging.getLogger("secure_test")
+            logger.setLevel(logging.DEBUG)
+            # Make sure we don't have other handlers from other tests
+            logger.handlers = []
+            logger.addHandler(handler)
+
+            # The emit method might raise exception if formatter is not set and string formatting is used
+            handler.setFormatter(logging.Formatter('%(message)s'))
+
+            # Write enough data to trigger rotation
+            logger.info("A" * 80)
+            logger.info("B" * 80)
+            logger.info("C" * 80)
+
+            # Ensure the logs are flushed/closed
+            handler.close()
+
+            # Check permissions of all created log files
+            files = os.listdir(td)
+            self.assertGreaterEqual(len(files), 2, "Log rotation did not occur")
+
+            for name in files:
+                path = os.path.join(td, name)
+                st = os.stat(path)
+                perms = stat.S_IMODE(st.st_mode)
+                self.assertEqual(perms, 0o600, f"Expected 0o600 permissions on {name}, got {oct(perms)}")
+
     def test_copy_assets_prevents_symlink_overwrite(self):
         with tempfile.TemporaryDirectory() as td:
             td_path = Path(td)
