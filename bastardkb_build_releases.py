@@ -245,23 +245,27 @@ class Reporter(object):
         )
         self.logging.error(f"{title}: {message}")
 
-    def print_summary(self, success_count: int, total_count: int, failed_firmwares: Optional[Sequence[Firmware]] = None) -> None:
+    def print_summary(self, success_count: int, total_count: int, failed_firmwares: Optional[Sequence[Firmware]] = None, dry_run: bool = False) -> None:
         failed_count = total_count - success_count
 
         log_info = Text(f"\n\nLogs saved in: {self.app_log_dir}", style="dim")
 
+        action_term = "simulated" if dry_run else "built"
+        color = "blue" if dry_run else "green"
+        icon = "🚀" if dry_run else "🎉"
+
         if failed_count == 0:
-            content = Text("All firmwares built successfully! 🎉", justify="center", style="bold green") + log_info
+            content = Text(f"All firmwares {action_term} successfully! {icon}", justify="center", style=f"bold {color}") + log_info
             self.console.print(
                 Panel(
                     content,
-                    title="[bold green]Success[/bold green]",
-                    border_style="green",
+                    title=f"[bold {color}]Success[/bold {color}]",
+                    border_style=color,
                     padding=(1, 2),
                 )
             )
         else:
-            content = Text(f"{success_count} built\n{failed_count} failed\n", justify="center")
+            content = Text(f"{success_count} {action_term}\n{failed_count} failed\n", justify="center")
             if failed_firmwares:
                 content.append("\nFailed Firmwares:\n", style="bold red")
                 for fw in failed_firmwares:
@@ -275,7 +279,7 @@ class Reporter(object):
                     padding=(1, 2),
                 )
             )
-        self.logging.info(f"Done: built={success_count}, failed={failed_count}")
+        self.logging.info(f"Done: {action_term}={success_count}, failed={failed_count}")
 
 
 class QmkCompletedProcess(object):
@@ -442,8 +446,12 @@ def build(
                         built_firmware_count += 1
                         reporter.info(f"    [not bold white]{firmware}[/] [green]ok[/]")
                     except FileNotFoundError:
-                        reporter.warn(f"    [not bold white]{firmware}[/] [yellow]ok[/]")
-                        failed_firmwares.append(firmware)
+                        if executor.dry_run:
+                            built_firmware_count += 1
+                            reporter.info(f"    [not bold white]{firmware}[/] [blue]simulated[/]")
+                        else:
+                            reporter.warn(f"    [not bold white]{firmware}[/] [yellow]ok[/]")
+                            failed_firmwares.append(firmware)
                 else:
                     reporter.error(f"    [not bold white]{firmware}[/] [red]ko[/]")
                     reporter.error(f"Logs: {completed_process.log_file}")
@@ -452,7 +460,7 @@ def build(
             reporter.newline()
         overall_status.update(overall_status_task, visible=False)
         empty_status.update(newline_task, visible=False)
-        reporter.print_summary(built_firmware_count, total_firmware_count, failed_firmwares)
+        reporter.print_summary(built_firmware_count, total_firmware_count, failed_firmwares, dry_run=executor.dry_run)
 
 
 def copy_firmware_to_output_dir(reporter: Reporter, output_dir: Path, firmware_path: Path):
@@ -502,7 +510,10 @@ def sigint_handler(reporter: Reporter, signal, frame):
 
 def main() -> None:
     # Parse command line arguments.
-    parser = argparse.ArgumentParser(description="Create Bastard Keyboard firmware release.")
+    parser = argparse.ArgumentParser(
+        description="Create Bastard Keyboard firmware release.",
+        formatter_class=argparse.ArgumentDefaultsHelpFormatter,
+    )
     parser.add_argument(
         "-n",
         "--dry-run",
