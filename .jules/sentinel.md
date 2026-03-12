@@ -17,3 +17,8 @@
 **Vulnerability:** When using standard `RotatingFileHandler` with a temporary umask setup, the initial log file is created with restricted permissions (e.g., `0600`), but rotated files created later by the handler inherit the process's default umask (often `022`), resulting in permissive permissions (e.g., `0644`). This could expose rotated logs to unauthorized local users.
 **Learning:** Setting the `umask` around the initialization of a `RotatingFileHandler` is insufficient to protect rotated log files, as the file rotation logic happens asynchronously later during a logging event.
 **Prevention:** Subclass the `RotatingFileHandler` and override the internal `_open` method to temporarily apply a restrictive `umask` (e.g., `0o077`) every time a new log file is opened or rotated, ensuring all generated log files maintain correct permissions.
+
+## 2026-11-22 - Arbitrary File Read via Malicious Symlink
+**Vulnerability:** Insecure file iteration during artifact copy. `Path.glob()` includes symlinks by default. If the repository being packaged contains a malicious symlink pointing to a sensitive system file (e.g., `/etc/passwd`), `shutil.copyfile()` will resolve the symlink and copy the contents of the sensitive file into the release artifacts, exposing it.
+**Learning:** When packaging or copying files from untrusted or user-controlled sources (like a git repository), blindly following symlinks can lead to arbitrary file read (local file inclusion) vulnerabilities.
+**Prevention:** Explicitly exclude symlinks when gathering files to package or copy. Use `not Path.is_symlink()` alongside `Path.is_file()` during file iteration to ensure only regular files are processed.
