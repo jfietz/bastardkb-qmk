@@ -21,3 +21,7 @@
 ## 2024-05-15 - Visual Distinction for Simulated Outputs
 **Learning:** Users experience cognitive dissonance when a dry-run or simulated process reports as "built" or "failed" with the same visual styling (green/red) as an actual execution. Missing artifacts in a dry run are expected, not failures.
 **Action:** Always provide clear visual distinction (e.g., "simulated" text, blue coloring) for simulated or dry-run states to differentiate them from actual persistent actions.
+
+## 2024-05-28 - [Help Discoverability]
+**Learning:** CLI tools that require dependencies can fail to provide help output (`--help`) if the dependencies are imported at the top level and are missing. Users just trying to understand how to use the tool are blocked by a missing dependency error before they can even read the help text.
+**Action:** Defer importing third-party dependencies until after parsing arguments (at least `--help`) to ensure users can always access help text, even without dependencies installed.
