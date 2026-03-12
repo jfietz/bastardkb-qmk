@@ -65,9 +65,6 @@ class TestUX(unittest.TestCase):
 
     def test_parallel_default_help(self):
         """Verify the help text shows the correct default for parallel."""
-        # Skipping this test as it requires dependencies to be installed in the subprocess
-        return
-
         cpu_count = os.cpu_count() or 1
         result = subprocess.run(
             [sys.executable, "bastardkb_build_releases.py", "--help"],
@@ -75,7 +72,7 @@ class TestUX(unittest.TestCase):
             text=True
         )
         self.assertEqual(result.returncode, 0)
-        expected_pattern = fr"Parallel option to pass to qmk-compile\..*Defaults\s+to\s+number\s+of\s+CPUs\s+\({cpu_count}\)"
+        expected_pattern = fr"Parallel option to pass to qmk-compile\.\s*\(default:\s*{cpu_count}\)"
         self.assertRegex(result.stdout, re.compile(expected_pattern, re.DOTALL))
 
     def test_print_summary_exists(self):

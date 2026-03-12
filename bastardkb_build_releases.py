@@ -17,24 +17,73 @@ from functools import partial, reduce
 from logging.handlers import RotatingFileHandler
 from operator import iconcat
 from pathlib import Path, PurePath
-from pygit2 import (
-    GitError,
-    Repository,
-    Worktree,
-)
-from rich.console import Console, Group
-from rich.live import Live
-from rich.panel import Panel
-from rich.progress import (
-    BarColumn,
-    MofNCompleteColumn,
-    Progress,
-    SpinnerColumn,
-    TextColumn,
-    TimeElapsedColumn,
-)
-from rich.text import Text
 from typing import NamedTuple, Optional
+
+
+def build_cmdline_parser() -> argparse.ArgumentParser:
+    parser = argparse.ArgumentParser(description="Create Bastard Keyboard firmware release.", formatter_class=argparse.ArgumentDefaultsHelpFormatter)
+    parser.add_argument(
+        "-n",
+        "--dry-run",
+        action="store_true",
+        help="Don't actually build, just show the commands to be run.",
+    )
+    parser.add_argument(
+        "-j",
+        "--parallel",
+        type=int,
+        help="Parallel option to pass to qmk-compile.",
+        default=os.cpu_count() or 1,
+    )
+    parser.add_argument("-v", "--verbose", action="store_true", help="Enable verbose output.")
+    parser.add_argument(
+        "-r",
+        "--repository",
+        type=PurePath,
+        help="The QMK repository checkout to work with.",
+        default=Path.cwd(),
+    )
+    parser.add_argument(
+        "-o",
+        "--output-dir",
+        type=Path,
+        help="The output directory in which to copy the artifacts.",
+        default=Path.cwd(),
+    )
+    parser.add_argument(
+        "-f",
+        "--filter",
+        type=str,
+        help="Filter the list of firmwares to build.",
+        default=".*",
+    )
+    return parser
+
+if "-h" in sys.argv or "--help" in sys.argv:
+    build_cmdline_parser().parse_args()
+
+try:
+    from pygit2 import (
+        GitError,
+        Repository,
+        Worktree,
+    )
+    from rich.console import Console, Group
+    from rich.live import Live
+    from rich.panel import Panel
+    from rich.progress import (
+        BarColumn,
+        MofNCompleteColumn,
+        Progress,
+        SpinnerColumn,
+        TextColumn,
+        TimeElapsedColumn,
+    )
+    from rich.text import Text
+except ImportError as e:
+    print(f"Error: Missing required dependency: {e.name}", file=sys.stderr)
+    print("Please ensure all dependencies (like 'pygit2' and 'rich') are installed.", file=sys.stderr)
+    sys.exit(1)
 
 
 class SecureRotatingFileHandler(RotatingFileHandler):
@@ -518,42 +567,7 @@ def sigint_handler(reporter: Reporter, signal, frame):
 
 def main() -> None:
     # Parse command line arguments.
-    parser = argparse.ArgumentParser(description="Create Bastard Keyboard firmware release.", formatter_class=argparse.ArgumentDefaultsHelpFormatter)
-    parser.add_argument(
-        "-n",
-        "--dry-run",
-        action="store_true",
-        help="Don't actually build, just show the commands to be run.",
-    )
-    parser.add_argument(
-        "-j",
-        "--parallel",
-        type=int,
-        help="Parallel option to pass to qmk-compile.",
-        default=os.cpu_count() or 1,
-    )
-    parser.add_argument("-v", "--verbose", action="store_true", help="Enable verbose output.")
-    parser.add_argument(
-        "-r",
-        "--repository",
-        type=PurePath,
-        help="The QMK repository checkout to work with.",
-        default=Path.cwd(),
-    )
-    parser.add_argument(
-        "-o",
-        "--output-dir",
-        type=Path,
-        help="The output directory in which to copy the artifacts.",
-        default=Path.cwd(),
-    )
-    parser.add_argument(
-        "-f",
-        "--filter",
-        type=str,
-        help="Filter the list of firmwares to build.",
-        default=".*",
-    )
+    parser = build_cmdline_parser()
     cmdline_args = parser.parse_args()
     reporter = Reporter(cmdline_args.verbose)
 
