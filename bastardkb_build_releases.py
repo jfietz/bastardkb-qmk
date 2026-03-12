@@ -245,23 +245,29 @@ class Reporter(object):
         )
         self.logging.error(f"{title}: {message}")
 
-    def print_summary(self, success_count: int, total_count: int, failed_firmwares: Optional[Sequence[Firmware]] = None) -> None:
+    def print_summary(self, success_count: int, total_count: int, failed_firmwares: Optional[Sequence[Firmware]] = None, is_dry_run: bool = False) -> None:
         failed_count = total_count - success_count
 
         log_info = Text(f"\n\nLogs saved in: {self.app_log_dir}", style="dim")
 
         if failed_count == 0:
-            content = Text("All firmwares built successfully! 🎉", justify="center", style="bold green") + log_info
+            msg = "All firmwares simulated successfully! 🎉" if is_dry_run else "All firmwares built successfully! 🎉"
+            style = "bold blue" if is_dry_run else "bold green"
+            title = "[bold blue]Simulated[/bold blue]" if is_dry_run else "[bold green]Success[/bold green]"
+            border = "blue" if is_dry_run else "green"
+
+            content = Text(msg, justify="center", style=style) + log_info
             self.console.print(
                 Panel(
                     content,
-                    title="[bold green]Success[/bold green]",
-                    border_style="green",
+                    title=title,
+                    border_style=border,
                     padding=(1, 2),
                 )
             )
         else:
-            content = Text(f"{success_count} built\n{failed_count} failed\n", justify="center")
+            action_word = "simulated" if is_dry_run else "built"
+            content = Text(f"{success_count} {action_word}\n{failed_count} failed\n", justify="center")
             if failed_firmwares:
                 content.append("\nFailed Firmwares:\n", style="bold red")
                 for fw in failed_firmwares:
@@ -442,8 +448,12 @@ def build(
                         built_firmware_count += 1
                         reporter.info(f"    [not bold white]{firmware}[/] [green]ok[/]")
                     except FileNotFoundError:
-                        reporter.warn(f"    [not bold white]{firmware}[/] [yellow]ok[/]")
-                        failed_firmwares.append(firmware)
+                        if executor.dry_run:
+                            built_firmware_count += 1
+                            reporter.info(f"    [not bold white]{firmware}[/] [blue]simulated[/]")
+                        else:
+                            reporter.warn(f"    [not bold white]{firmware}[/] [yellow]ok[/]")
+                            failed_firmwares.append(firmware)
                 else:
                     reporter.error(f"    [not bold white]{firmware}[/] [red]ko[/]")
                     reporter.error(f"Logs: {completed_process.log_file}")
@@ -452,7 +462,7 @@ def build(
             reporter.newline()
         overall_status.update(overall_status_task, visible=False)
         empty_status.update(newline_task, visible=False)
-        reporter.print_summary(built_firmware_count, total_firmware_count, failed_firmwares)
+        reporter.print_summary(built_firmware_count, total_firmware_count, failed_firmwares, is_dry_run=executor.dry_run)
 
 
 def copy_firmware_to_output_dir(reporter: Reporter, output_dir: Path, firmware_path: Path):
@@ -502,7 +512,7 @@ def sigint_handler(reporter: Reporter, signal, frame):
 
 def main() -> None:
     # Parse command line arguments.
-    parser = argparse.ArgumentParser(description="Create Bastard Keyboard firmware release.")
+    parser = argparse.ArgumentParser(description="Create Bastard Keyboard firmware release.", formatter_class=argparse.ArgumentDefaultsHelpFormatter)
     parser.add_argument(
         "-n",
         "--dry-run",
@@ -513,7 +523,7 @@ def main() -> None:
         "-j",
         "--parallel",
         type=int,
-        help="Parallel option to pass to qmk-compile. Defaults to number of CPUs (%(default)s).",
+        help="Parallel option to pass to qmk-compile.",
         default=os.cpu_count() or 1,
     )
     parser.add_argument("-v", "--verbose", action="store_true", help="Enable verbose output.")
