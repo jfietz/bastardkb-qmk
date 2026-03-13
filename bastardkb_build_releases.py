@@ -1,5 +1,6 @@
 #! /usr/bin/env python3
 
+from __future__ import annotations
 import argparse
 import logging
 import os
@@ -17,24 +18,44 @@ from functools import partial, reduce
 from logging.handlers import RotatingFileHandler
 from operator import iconcat
 from pathlib import Path, PurePath
-from pygit2 import (
-    GitError,
-    Repository,
-    Worktree,
-)
-from rich.console import Console, Group
-from rich.live import Live
-from rich.panel import Panel
-from rich.progress import (
-    BarColumn,
-    MofNCompleteColumn,
-    Progress,
-    SpinnerColumn,
-    TextColumn,
-    TimeElapsedColumn,
-)
-from rich.text import Text
 from typing import NamedTuple, Optional
+
+try:
+    from pygit2 import (
+        GitError,
+        Repository,
+        Worktree,
+    )
+    from rich.console import Console, Group
+    from rich.live import Live
+    from rich.panel import Panel
+    from rich.progress import (
+        BarColumn,
+        MofNCompleteColumn,
+        Progress,
+        SpinnerColumn,
+        TextColumn,
+        TimeElapsedColumn,
+    )
+    from rich.text import Text
+except ImportError as e:
+    if "-h" in sys.argv or "--help" in sys.argv:
+        GitError = type("MockGitError", (Exception,), {})
+        Repository = type("MockRepository", (), {})
+        Worktree = type("MockWorktree", (), {})
+        Console = type("MockConsole", (), {})
+        Group = type("MockGroup", (), {})
+        Live = type("MockLive", (), {})
+        Panel = type("MockPanel", (), {})
+        BarColumn = type("MockBarColumn", (), {})
+        MofNCompleteColumn = type("MockMofNCompleteColumn", (), {})
+        Progress = type("MockProgress", (), {})
+        SpinnerColumn = type("MockSpinnerColumn", (), {})
+        TextColumn = type("MockTextColumn", (), {})
+        TimeElapsedColumn = type("MockTimeElapsedColumn", (), {})
+        Text = type("MockText", (), {})
+    else:
+        raise e
 
 
 class SecureRotatingFileHandler(RotatingFileHandler):
