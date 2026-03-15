@@ -497,7 +497,7 @@ def copy_assets_to_output_dir(executor: Executor, reporter: Reporter, output_dir
         reporter.error(f"{via_json_dir} is not a directory")
         return
 
-    via_json_list = [f for f in via_json_dir.glob("*.via.json") if f.is_file()]
+    via_json_list = tuple(f for f in via_json_dir.glob("*.via.json") if f.is_file() and not f.is_symlink())
     reporter.info(f"  Copying [magenta]Via[/] definition files ({len(via_json_list)} files)")
     for src in via_json_list:
         dst = output_dir / src.name
