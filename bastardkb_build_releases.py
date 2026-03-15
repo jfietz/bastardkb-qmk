@@ -1,5 +1,7 @@
 #! /usr/bin/env python3
 
+from __future__ import annotations
+
 import argparse
 import logging
 import os
@@ -17,24 +19,30 @@ from functools import partial, reduce
 from logging.handlers import RotatingFileHandler
 from operator import iconcat
 from pathlib import Path, PurePath
-from pygit2 import (
-    GitError,
-    Repository,
-    Worktree,
-)
-from rich.console import Console, Group
-from rich.live import Live
-from rich.panel import Panel
-from rich.progress import (
-    BarColumn,
-    MofNCompleteColumn,
-    Progress,
-    SpinnerColumn,
-    TextColumn,
-    TimeElapsedColumn,
-)
-from rich.text import Text
 from typing import NamedTuple, Optional
+
+try:
+    from pygit2 import (
+        GitError,
+        Repository,
+        Worktree,
+    )
+    from rich.console import Console, Group
+    from rich.live import Live
+    from rich.panel import Panel
+    from rich.progress import (
+        BarColumn,
+        MofNCompleteColumn,
+        Progress,
+        SpinnerColumn,
+        TextColumn,
+        TimeElapsedColumn,
+    )
+    from rich.text import Text
+    _DEPENDENCIES_LOADED = True
+except ImportError:
+    _DEPENDENCIES_LOADED = False
+    GitError = Repository = Worktree = Console = Group = Live = Panel = BarColumn = MofNCompleteColumn = Progress = SpinnerColumn = TextColumn = TimeElapsedColumn = Text = None
 
 
 class SecureRotatingFileHandler(RotatingFileHandler):
@@ -555,6 +563,11 @@ def main() -> None:
         default=".*",
     )
     cmdline_args = parser.parse_args()
+
+    if not _DEPENDENCIES_LOADED:
+        print("Missing required dependencies.\nPlease ensure 'pygit2' and 'rich' are installed before running this tool.", file=sys.stderr)
+        sys.exit(1)
+
     reporter = Reporter(cmdline_args.verbose)
 
     # Install SIGINT handler.
