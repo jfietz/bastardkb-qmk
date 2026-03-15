@@ -21,3 +21,7 @@
 ## 2024-05-15 - Visual Distinction for Simulated Outputs
 **Learning:** Users experience cognitive dissonance when a dry-run or simulated process reports as "built" or "failed" with the same visual styling (green/red) as an actual execution. Missing artifacts in a dry run are expected, not failures.
 **Action:** Always provide clear visual distinction (e.g., "simulated" text, blue coloring) for simulated or dry-run states to differentiate them from actual persistent actions.
+
+## 2024-05-28 - [CLI Help Without Dependencies]
+**Learning:** For CLI tools written in Python, placing third-party imports in an unconditional block prevents users from even reading the `--help` menu before running `pip install`. This is an unexpected friction point, especially for users just exploring the tool.
+**Action:** Wrap third-party dependencies in a `try...except ImportError` block that allows the `argparse` help text to execute successfully when `-h` or `--help` is invoked, only re-raising the import error if the tool is invoked to actually run. Include `from __future__ import annotations` to ensure types like `Optional[Sequence[Firmware]]` are deferred.
