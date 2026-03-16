@@ -171,5 +171,22 @@ class TestUX(unittest.TestCase):
             # verify exit was called
             mock_exit.assert_called_once_with(1)
 
+    @patch("sys.argv", ["bastardkb_build_releases.py", "--filter", "["])
+    @patch("shutil.which", return_value="mocked")
+    @patch("sys.exit")
+    def test_invalid_regex_filter_fatal_error(self, mock_exit, mock_which):
+        """Verify that an invalid regex filter triggers a styled fatal error panel."""
+        mock_exit.side_effect = SystemExit(1)
+
+        with patch("bastardkb_build_releases.Reporter.fatal") as mock_fatal:
+            with self.assertRaises(SystemExit):
+                bkb.main()
+
+            self.assertTrue(mock_fatal.called)
+            args, kwargs = mock_fatal.call_args
+            self.assertIn("Regex Error", kwargs.get("title", ""))
+            self.assertIn("unterminated character set", args[0])
+            mock_exit.assert_called_once_with(1)
+
 if __name__ == '__main__':
     unittest.main()

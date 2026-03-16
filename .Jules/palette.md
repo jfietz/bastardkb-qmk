@@ -21,3 +21,7 @@
 ## 2024-05-15 - Visual Distinction for Simulated Outputs
 **Learning:** Users experience cognitive dissonance when a dry-run or simulated process reports as "built" or "failed" with the same visual styling (green/red) as an actual execution. Missing artifacts in a dry run are expected, not failures.
 **Action:** Always provide clear visual distinction (e.g., "simulated" text, blue coloring) for simulated or dry-run states to differentiate them from actual persistent actions.
+
+## 2026-05-28 - [CLI Argument Validation Error Visibility]
+**Learning:** Raw stack traces from standard library exceptions (like `re.error`) caused by invalid user input (like a malformed regex in a CLI flag) are jarring and unhelpful.
+**Action:** Always validate and catch expected input errors (like regex compilation) early and display them using formatted error panels (`reporter.fatal`) instead of letting the application crash with a traceback.
