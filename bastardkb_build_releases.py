@@ -569,6 +569,16 @@ def main() -> None:
             )
             sys.exit(1)
 
+    # Validate the regex filter early.
+    try:
+        filter_pattern = re.compile(cmdline_args.filter)
+    except re.error as e:
+        reporter.fatal(
+            f"Invalid regular expression provided for [bold]--filter[/bold].\n\nPattern: '{cmdline_args.filter}'\nError: {e}",
+            title="Regex Error",
+        )
+        sys.exit(1)
+
     # Open QMK repository.
     try:
         repository = Repository(cmdline_args.repository)
@@ -602,7 +612,7 @@ def main() -> None:
     build(
         executor,
         reporter,
-        apply_filter(ALL_FIRMWARES, re.compile(cmdline_args.filter)),
+        apply_filter(ALL_FIRMWARES, filter_pattern),
         partial(
             copy_firmware_to_output_dir,
             reporter,
