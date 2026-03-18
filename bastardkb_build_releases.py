@@ -598,11 +598,21 @@ def main() -> None:
     # Create the process dispatcher.
     executor = Executor(reporter, repository, cmdline_args.dry_run, cmdline_args.parallel)
 
+    # Parse the filter regex.
+    try:
+        filter_pattern = re.compile(cmdline_args.filter)
+    except re.error as e:
+        reporter.fatal(
+            f"The provided filter is not a valid regular expression.\n\nFilter: [bold]{cmdline_args.filter}[/bold]\nError: {e}",
+            title="Invalid Filter",
+        )
+        sys.exit(1)
+
     # Build the firmwares and copy them to the ouptut directory.
     build(
         executor,
         reporter,
-        apply_filter(ALL_FIRMWARES, re.compile(cmdline_args.filter)),
+        apply_filter(ALL_FIRMWARES, filter_pattern),
         partial(
             copy_firmware_to_output_dir,
             reporter,
