@@ -21,3 +21,7 @@
 ## 2024-05-15 - Visual Distinction for Simulated Outputs
 **Learning:** Users experience cognitive dissonance when a dry-run or simulated process reports as "built" or "failed" with the same visual styling (green/red) as an actual execution. Missing artifacts in a dry run are expected, not failures.
 **Action:** Always provide clear visual distinction (e.g., "simulated" text, blue coloring) for simulated or dry-run states to differentiate them from actual persistent actions.
+
+## 2024-05-28 - [Accessible CLI Help]
+**Learning:** CLI tools that fail immediately upon import errors for visual dependencies (like `rich`) prevent users from even reading the `--help` command. This creates a chicken-and-egg problem where users can't see the tool's requirements or usage instructions because they don't have the requirements installed.
+**Action:** Always wrap non-standard library imports in a `try...except ImportError` block. Evaluate CLI args (like `-h`) *before* enforcing dependency requirements so that documentation is always accessible. Use `from __future__ import annotations` to prevent `NameError` exceptions on type hints when modules are mocked or missing.
