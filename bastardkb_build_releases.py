@@ -1,5 +1,7 @@
 #! /usr/bin/env python3
 
+from __future__ import annotations
+
 import argparse
 import logging
 import os
@@ -17,24 +19,29 @@ from functools import partial, reduce
 from logging.handlers import RotatingFileHandler
 from operator import iconcat
 from pathlib import Path, PurePath
-from pygit2 import (
-    GitError,
-    Repository,
-    Worktree,
-)
-from rich.console import Console, Group
-from rich.live import Live
-from rich.panel import Panel
-from rich.progress import (
-    BarColumn,
-    MofNCompleteColumn,
-    Progress,
-    SpinnerColumn,
-    TextColumn,
-    TimeElapsedColumn,
-)
-from rich.text import Text
 from typing import NamedTuple, Optional
+
+try:
+    from pygit2 import (
+        GitError,
+        Repository,
+        Worktree,
+    )
+    from rich.console import Console, Group
+    from rich.live import Live
+    from rich.panel import Panel
+    from rich.progress import (
+        BarColumn,
+        MofNCompleteColumn,
+        Progress,
+        SpinnerColumn,
+        TextColumn,
+        TimeElapsedColumn,
+    )
+    from rich.text import Text
+    _DEPENDENCIES_LOADED = True
+except ImportError:
+    _DEPENDENCIES_LOADED = False
 
 
 class SecureRotatingFileHandler(RotatingFileHandler):
@@ -555,6 +562,13 @@ def main() -> None:
         default=".*",
     )
     cmdline_args = parser.parse_args()
+
+    # If dependencies aren't loaded, we shouldn't get here unless someone is running without args or something,
+    # but we should still fail gracefully before trying to instantiate Reporter which uses 'rich'
+    if not _DEPENDENCIES_LOADED:
+        print("Error: Missing required Python modules. Please install pygit2 and rich.", file=sys.stderr)
+        sys.exit(1)
+
     reporter = Reporter(cmdline_args.verbose)
 
     # Install SIGINT handler.
