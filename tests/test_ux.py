@@ -171,5 +171,33 @@ class TestUX(unittest.TestCase):
             # verify exit was called
             mock_exit.assert_called_once_with(1)
 
+    @patch("sys.argv", ["bastardkb_build_releases.py", "--filter", "["])
+    @patch("shutil.which", return_value="fake_path")
+    @patch("sys.exit")
+    def test_invalid_filter_regex_fatal_error(self, mock_exit, mock_which):
+        """Verify that an invalid --filter regex triggers a styled fatal error panel."""
+        # Setup mock_exit to actually raise SystemExit so execution halts
+        mock_exit.side_effect = SystemExit(1)
+
+        # We need to mock pygit2 Repository to avoid GitError in main
+        with patch("bastardkb_build_releases.Repository") as mock_repo:
+            mock_repo.return_value.is_bare = True
+
+            with patch("bastardkb_build_releases.Reporter.fatal") as mock_fatal:
+                with self.assertRaises(SystemExit):
+                    bkb.main()
+
+                # Verify reporter.fatal was called
+                self.assertTrue(mock_fatal.called)
+
+                # Verify the call contains the correct title and message
+                args, kwargs = mock_fatal.call_args
+                self.assertIn("Filter Error", kwargs.get("title", ""))
+                self.assertIn("[bold][[/bold]", args[0])
+                self.assertIn("Invalid regular expression provided", args[0])
+
+                # verify exit was called with code 1
+                mock_exit.assert_called_once_with(1)
+
 if __name__ == '__main__':
     unittest.main()
