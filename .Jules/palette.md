@@ -21,3 +21,7 @@
 ## 2024-05-15 - Visual Distinction for Simulated Outputs
 **Learning:** Users experience cognitive dissonance when a dry-run or simulated process reports as "built" or "failed" with the same visual styling (green/red) as an actual execution. Missing artifacts in a dry run are expected, not failures.
 **Action:** Always provide clear visual distinction (e.g., "simulated" text, blue coloring) for simulated or dry-run states to differentiate them from actual persistent actions.
+
+## 2026-06-21 - [User Input Validation Error Visibility]
+**Learning:** Exposing raw Python tracebacks (like `re.error`) to users when they provide invalid CLI arguments (like a malformed `--filter` regex) creates confusion and looks unprofessional. Catching these exceptions and using visual containers like `rich.panel` to display friendly, actionable error messages greatly improves the user experience.
+**Action:** Always validate user input and catch expected standard library exceptions related to input parsing, replacing stack traces with styled, actionable error messages.
