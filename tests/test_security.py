@@ -111,6 +111,43 @@ class TestSecurity(unittest.TestCase):
             self.assertFalse(dst.is_symlink())
             self.assertEqual(dst.read_text(), "via config content")
 
+    def test_copy_assets_prevents_arbitrary_file_read_via_symlink(self):
+        with tempfile.TemporaryDirectory() as td:
+            td_path = Path(td)
+
+            # Create a mock repository directory structure
+            repo_path = td_path / "repo"
+            via_dir = repo_path / "main" / "via"
+            via_dir.mkdir(parents=True)
+
+            # Create an output directory
+            out_dir = td_path / "output"
+            out_dir.mkdir()
+
+            # Create a sensitive source file outside the repo directory
+            sensitive_file = td_path / "sensitive_source.txt"
+            sensitive_file.write_text("secret source content")
+
+            # Create a malicious symlink in the via directory pointing to the sensitive file
+            malicious_symlink = via_dir / "malicious.via.json"
+            os.symlink(sensitive_file, malicious_symlink)
+
+            # Create a valid .via.json file
+            valid_via_file = via_dir / "valid.via.json"
+            valid_via_file.write_text("valid via content")
+
+            # Execute copy_assets_to_output_dir
+            bkb.copy_assets_to_output_dir(self.executor, self.reporter, out_dir, repo_path)
+
+            # Assert the sensitive file was NOT copied
+            malicious_dst = out_dir / "malicious.via.json"
+            self.assertFalse(malicious_dst.exists())
+
+            # Assert the valid file WAS copied
+            valid_dst = out_dir / "valid.via.json"
+            self.assertTrue(valid_dst.exists())
+            self.assertEqual(valid_dst.read_text(), "valid via content")
+
 
 if __name__ == '__main__':
     unittest.main()
