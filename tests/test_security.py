@@ -111,6 +111,30 @@ class TestSecurity(unittest.TestCase):
             self.assertFalse(dst.is_symlink())
             self.assertEqual(dst.read_text(), "via config content")
 
+    def test_copy_assets_prevents_symlink_read(self):
+        with tempfile.TemporaryDirectory() as td:
+            base = Path(td)
+            repo_path = base / "repo"
+            via_dir = repo_path / "main" / "via"
+            via_dir.mkdir(parents=True)
+
+            # Create a sensitive file outside repo
+            sensitive = base / "passwd"
+            sensitive.write_text("root:x:0:0:")
+
+            # Create a symlink in the repo pointing to the sensitive file
+            symlink = via_dir / "keyboard.via.json"
+            os.symlink(sensitive, symlink)
+
+            out_dir = base / "output"
+            out_dir.mkdir()
+
+            bkb.copy_assets_to_output_dir(self.executor, self.reporter, out_dir, repo_path)
+
+            # Check if out_dir contains keyboard.via.json
+            copied_file = out_dir / "keyboard.via.json"
+            self.assertFalse(copied_file.exists(), "Symlink in source was followed and copied!")
+
 
 if __name__ == '__main__':
     unittest.main()
