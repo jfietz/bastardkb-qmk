@@ -111,6 +111,34 @@ class TestSecurity(unittest.TestCase):
             self.assertFalse(dst.is_symlink())
             self.assertEqual(dst.read_text(), "via config content")
 
+    def test_copy_assets_prevents_arbitrary_file_read_via_symlink(self):
+        with tempfile.TemporaryDirectory() as td:
+            td_path = Path(td)
+
+            # Create a mock repository directory structure
+            repo_path = td_path / "repo"
+            via_dir = repo_path / "main" / "via"
+            via_dir.mkdir(parents=True)
+
+            # Create an output directory
+            out_dir = td_path / "output"
+            out_dir.mkdir()
+
+            # Create a sensitive file outside the repo
+            sensitive_file = td_path / "sensitive.txt"
+            sensitive_file.write_text("secret_token_123")
+
+            # Create a symlink in the via directory pointing to the sensitive file
+            malicious_symlink = via_dir / "malicious.via.json"
+            os.symlink(sensitive_file, malicious_symlink)
+
+            # Execute copy_assets_to_output_dir
+            bkb.copy_assets_to_output_dir(self.executor, self.reporter, out_dir, repo_path)
+
+            # The symlink should have been ignored
+            dst = out_dir / "malicious.via.json"
+            self.assertFalse(dst.exists(), "Malicious symlink target was copied to the output directory!")
+
 
 if __name__ == '__main__':
     unittest.main()
