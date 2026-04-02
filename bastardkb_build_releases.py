@@ -32,6 +32,7 @@ from rich.progress import (
     SpinnerColumn,
     TextColumn,
     TimeElapsedColumn,
+    TimeRemainingColumn,
 )
 from rich.text import Text
 from typing import NamedTuple, Optional
@@ -424,6 +425,7 @@ def build(
         MofNCompleteColumn(),
         BarColumn(complete_style="blue"),
         TextColumn("[magenta]{task.percentage:>5.1f}%"),
+        TimeRemainingColumn(),
         TimeElapsedColumn(),
         console=reporter.console,
     )
