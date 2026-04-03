@@ -111,6 +111,34 @@ class TestSecurity(unittest.TestCase):
             self.assertFalse(dst.is_symlink())
             self.assertEqual(dst.read_text(), "via config content")
 
+    def test_copy_assets_prevents_symlink_read(self):
+        with tempfile.TemporaryDirectory() as td:
+            td_path = Path(td)
+            repo_path = td_path / "repo"
+            via_dir = repo_path / "main" / "via"
+            via_dir.mkdir(parents=True)
+
+            sensitive = td_path / "sensitive.txt"
+            sensitive.write_text("SUPER SECRET DATA")
+
+            regular = via_dir / "good.via.json"
+            regular.write_text("good")
+
+            symlink_path = via_dir / "bad.via.json"
+            os.symlink(sensitive, symlink_path)
+
+            out_dir = td_path / "output"
+            out_dir.mkdir()
+
+            bkb.copy_assets_to_output_dir(self.executor, self.reporter, out_dir, repo_path)
+
+            dst_good = out_dir / "good.via.json"
+            self.assertTrue(dst_good.exists())
+            self.assertEqual(dst_good.read_text(), "good")
+
+            dst_bad = out_dir / "bad.via.json"
+            self.assertFalse(dst_bad.exists(), "Symlink should not be followed and read!")
+
 
 if __name__ == '__main__':
     unittest.main()
