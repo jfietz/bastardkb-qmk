@@ -17,3 +17,8 @@
 **Vulnerability:** When using standard `RotatingFileHandler` with a temporary umask setup, the initial log file is created with restricted permissions (e.g., `0600`), but rotated files created later by the handler inherit the process's default umask (often `022`), resulting in permissive permissions (e.g., `0644`). This could expose rotated logs to unauthorized local users.
 **Learning:** Setting the `umask` around the initialization of a `RotatingFileHandler` is insufficient to protect rotated log files, as the file rotation logic happens asynchronously later during a logging event.
 **Prevention:** Subclass the `RotatingFileHandler` and override the internal `_open` method to temporarily apply a restrictive `umask` (e.g., `0o077`) every time a new log file is opened or rotated, ensuring all generated log files maintain correct permissions.
+
+## 2026-11-25 - Arbitrary File Read via Symlink in Path.glob
+**Vulnerability:** The script blindly trusted `Path.is_file()` to filter files from an untrusted source directory (a git repository) before copying them. Since `is_file()` follows symlinks, an attacker could place a malicious symlink pointing to sensitive system files (e.g., `/etc/passwd`), causing them to be read and copied to the output directory.
+**Learning:** Python's `Path.is_file()` returns `True` for symlinks that point to valid files. When iterating over untrusted directories, combining `glob` with `is_file()` without checking `is_symlink()` creates an Arbitrary File Read vulnerability.
+**Prevention:** When scanning directories for files to process or copy, always explicitly check `not f.is_symlink()` alongside `f.is_file()` if the directory might contain user-controlled content or symlinks.
