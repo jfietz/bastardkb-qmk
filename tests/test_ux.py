@@ -171,5 +171,31 @@ class TestUX(unittest.TestCase):
             # verify exit was called
             mock_exit.assert_called_once_with(1)
 
+    @patch("bastardkb_build_releases.Progress")
+    def test_progress_bar_includes_time_remaining(self, mock_progress):
+        """Verify that TimeRemainingColumn is included in the progress bar columns."""
+        reporter = MagicMock()
+        executor = MagicMock()
+        executor.dry_run = True
+
+        with patch("bastardkb_build_releases.Live"):
+            bkb.build(executor, reporter, [], MagicMock())
+
+        # Inspect the calls to Progress to see if TimeRemainingColumn was instantiated
+        # Note: In test_ux.py, rich.progress is mocked. So bkb.TimeRemainingColumn is a MagicMock class.
+        found = False
+        for call_args, _ in mock_progress.call_args_list:
+            for arg in call_args:
+                if isinstance(arg, MagicMock):
+                    # bkb.TimeRemainingColumn is a MagicMock class, so we check if the arg is an instance created by it
+                    # Because mock classes don't work with isinstance like that directly, we can check its type name
+                    if "TimeRemainingColumn" in str(arg) or arg is bkb.TimeRemainingColumn.return_value:
+                        found = True
+                        break
+            if found:
+                break
+
+        self.assertTrue(found, "TimeRemainingColumn was not included in Progress columns")
+
 if __name__ == '__main__':
     unittest.main()
