@@ -76,6 +76,24 @@ class TestSecurity(unittest.TestCase):
                 perms = stat.S_IMODE(st.st_mode)
                 self.assertEqual(perms, 0o700, f"Expected 0o700 permissions, got {oct(perms)}")
 
+    def test_copy_assets_prevents_arbitrary_file_read_via_symlink(self):
+        with tempfile.TemporaryDirectory() as td:
+            td_path = Path(td)
+            repo_path = td_path / "repo"
+            via_dir = repo_path / "main" / "via"
+            via_dir.mkdir(parents=True)
+            sensitive_file = td_path / "sensitive.txt"
+            sensitive_file.write_text("secret_data")
+            symlink_src = via_dir / "malicious.via.json"
+            os.symlink(sensitive_file, symlink_src)
+            valid_file = via_dir / "valid.via.json"
+            valid_file.write_text("valid config")
+            out_dir = td_path / "output"
+            out_dir.mkdir()
+            bkb.copy_assets_to_output_dir(self.executor, self.reporter, out_dir, repo_path)
+            self.assertTrue((out_dir / "valid.via.json").exists())
+            self.assertFalse((out_dir / "malicious.via.json").exists())
+
     def test_copy_assets_prevents_symlink_overwrite(self):
         with tempfile.TemporaryDirectory() as td:
             td_path = Path(td)
