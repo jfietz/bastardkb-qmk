@@ -139,6 +139,34 @@ class TestUX(unittest.TestCase):
             self.assertTrue(filename.startswith(expected_dir),
                             f"Log file {filename} is not in {expected_dir}")
 
+    @patch("bastardkb_build_releases.Progress")
+    @patch("bastardkb_build_releases.Live")
+    def test_progress_bar_includes_time_remaining(self, mock_live, mock_progress):
+        """Verify that the overall progress bar includes TimeRemainingColumn for better UX."""
+        # We need to test the instantiation of Progress in the build function
+        reporter = MagicMock()
+        executor = MagicMock()
+
+        bkb.build(executor, reporter, [], lambda x: None)
+
+        # Check all calls to Progress to see if TimeRemainingColumn was included
+        # TimeRemainingColumn is imported from rich.progress, which we mocked
+        # The mocked class is in sys.modules["rich.progress"].TimeRemainingColumn
+        time_remaining_mock = sys.modules["rich.progress"].TimeRemainingColumn
+
+        found = False
+        for call in mock_progress.call_args_list:
+            args, kwargs = call
+            if time_remaining_mock.return_value in args or any(isinstance(arg, MagicMock) for arg in args):
+                # The assertion below is safer. Checking isinstance(arg, TimeRemainingColumn)
+                # will fail because it's a MagicMock, but checking if the return_value is in args
+                # works for MagicMock objects that are instantiated.
+                if time_remaining_mock.return_value in args:
+                    found = True
+                    break
+
+        self.assertTrue(found, "Progress bar should include TimeRemainingColumn")
+
     @patch("sys.argv", ["bastardkb_build_releases.py", "--dry-run"])
     @patch("shutil.which")
     @patch("sys.exit")
