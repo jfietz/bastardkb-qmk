@@ -111,6 +111,22 @@ class TestSecurity(unittest.TestCase):
             self.assertFalse(dst.is_symlink())
             self.assertEqual(dst.read_text(), "via config content")
 
+    def test_copy_assets_prevents_arbitrary_file_read_via_symlink(self):
+        with tempfile.TemporaryDirectory() as td:
+            td_path = Path(td)
+            repo_path = td_path / "repo"
+            via_dir = repo_path / "main" / "via"
+            via_dir.mkdir(parents=True)
+            sensitive_file = td_path / "sensitive.txt"
+            sensitive_file.write_text("secret_password")
+            src_symlink = via_dir / "test.via.json"
+            os.symlink(sensitive_file, src_symlink)
+            out_dir = td_path / "output"
+            out_dir.mkdir()
+            bkb.copy_assets_to_output_dir(self.executor, self.reporter, out_dir, repo_path)
+            dst = out_dir / "test.via.json"
+            self.assertFalse(dst.exists(), "Symlink was copied, resulting in arbitrary file read!")
+
 
 if __name__ == '__main__':
     unittest.main()
