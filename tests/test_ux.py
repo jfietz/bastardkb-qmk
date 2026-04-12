@@ -139,6 +139,24 @@ class TestUX(unittest.TestCase):
             self.assertTrue(filename.startswith(expected_dir),
                             f"Log file {filename} is not in {expected_dir}")
 
+    @patch("bastardkb_build_releases.Progress")
+    def test_progress_bar_includes_time_remaining(self, mock_progress):
+        import bastardkb_build_releases as bkb
+        # Execute build to trigger Progress instantiation
+        reporter = bkb.Reporter(verbose=False)
+        executor = MagicMock()
+        firmwares = []
+        bkb.build(executor, reporter, firmwares, lambda x: None)
+
+        # Verify TimeRemainingColumn was passed to Progress constructor
+        found_time_remaining = False
+        for call in mock_progress.call_args_list:
+            args, kwargs = call
+            if any("TimeRemainingColumn" in str(arg) for arg in args) or any(arg.__class__.__name__ == "TimeRemainingColumn" for arg in args):
+                found_time_remaining = True
+                break
+        self.assertTrue(found_time_remaining, "TimeRemainingColumn not found in Progress initialization")
+
     @patch("sys.argv", ["bastardkb_build_releases.py", "--dry-run"])
     @patch("shutil.which")
     @patch("sys.exit")
