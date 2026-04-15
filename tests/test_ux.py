@@ -171,5 +171,25 @@ class TestUX(unittest.TestCase):
             # verify exit was called
             mock_exit.assert_called_once_with(1)
 
+    def test_progress_time_remaining(self):
+        """Verify that TimeRemainingColumn is added to the overall progress bar."""
+        executor = MagicMock()
+        reporter = MagicMock()
+        reporter.console = MagicMock()
+
+        with patch('bastardkb_build_releases.Progress') as mock_progress:
+            with patch('bastardkb_build_releases.Group'), patch('bastardkb_build_releases.Live'):
+                bkb.build(executor, reporter, [], MagicMock())
+
+                found_time_remaining = False
+                for call in mock_progress.call_args_list:
+                    args, kwargs = call
+                    for arg in args:
+                        # Because rich.progress is globally mocked, TimeRemainingColumn is a MagicMock
+                        if 'TimeRemainingColumn' in str(arg) or arg.__class__.__name__ == 'TimeRemainingColumn':
+                            found_time_remaining = True
+
+                self.assertTrue(found_time_remaining, "TimeRemainingColumn should be added to the Progress bar for overall status.")
+
 if __name__ == '__main__':
     unittest.main()
