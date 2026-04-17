@@ -171,5 +171,30 @@ class TestUX(unittest.TestCase):
             # verify exit was called
             mock_exit.assert_called_once_with(1)
 
+    @patch("bastardkb_build_releases.Progress")
+    def test_time_remaining_column_present(self, mock_progress):
+        """Verify that TimeRemainingColumn is present in overall_progress to reduce wait anxiety."""
+        import bastardkb_build_releases as bkb
+
+        mock_executor = MagicMock()
+        mock_executor.dry_run = True
+        mock_reporter = MagicMock()
+        mock_reporter.console = MagicMock()
+
+        # Call build with empty firmwares so it finishes quickly
+        bkb.build(mock_executor, mock_reporter, [], MagicMock())
+
+        # Verify that TimeRemainingColumn is instantiated and passed to Progress
+        has_time_remaining = False
+        for call in mock_progress.call_args_list:
+            args, kwargs = call
+            if 'console' in kwargs:  # This identifies the overall_progress initialization
+                if any('TimeRemainingColumn' in str(arg) for arg in args):
+                    has_time_remaining = True
+                    break
+
+        self.assertTrue(has_time_remaining, "TimeRemainingColumn missing from overall_progress")
+
+
 if __name__ == '__main__':
     unittest.main()
