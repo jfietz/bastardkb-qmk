@@ -17,3 +17,8 @@
 **Vulnerability:** When using standard `RotatingFileHandler` with a temporary umask setup, the initial log file is created with restricted permissions (e.g., `0600`), but rotated files created later by the handler inherit the process's default umask (often `022`), resulting in permissive permissions (e.g., `0644`). This could expose rotated logs to unauthorized local users.
 **Learning:** Setting the `umask` around the initialization of a `RotatingFileHandler` is insufficient to protect rotated log files, as the file rotation logic happens asynchronously later during a logging event.
 **Prevention:** Subclass the `RotatingFileHandler` and override the internal `_open` method to temporarily apply a restrictive `umask` (e.g., `0o077`) every time a new log file is opened or rotated, ensuring all generated log files maintain correct permissions.
+
+## 2024-04-18 - Prevent arbitrary file read via symlinks
+**Vulnerability:** The script copied `.via.json` assets from a git repository to an output directory using `Path.is_file()` which follows symlinks. A malicious symlink committed to the repo could cause the script to copy sensitive files from the build environment to the output directory.
+**Learning:** `Path.is_file()` returns True for symlinks pointing to valid files. When processing files from untrusted sources, explicitly verifying `not Path.is_symlink()` is required.
+**Prevention:** Always check `not path.is_symlink()` when using `path.is_file()` to find files for copy/read operations in untrusted directories.
