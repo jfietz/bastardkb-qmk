@@ -50,6 +50,25 @@ import bastardkb_build_releases as bkb
 importlib.reload(bkb)
 
 class TestUX(unittest.TestCase):
+    @patch("bastardkb_build_releases.Progress")
+    @patch("bastardkb_build_releases.Executor")
+    def test_progress_includes_time_remaining(self, mock_executor, mock_progress):
+        import bastardkb_build_releases as bkb
+        reporter = MagicMock()
+        firmwares = []
+
+        bkb.build(mock_executor, reporter, firmwares, lambda x: None)
+
+        progress_calls = mock_progress.call_args_list
+        found_time_remaining = False
+        for call in progress_calls:
+            args, kwargs = call
+            if any('TimeRemainingColumn' in str(arg) for arg in args) or any('TimeRemainingColumn' in str(arg.__class__) for arg in args) or any(hasattr(arg, '_mock_name') and arg._mock_name == 'TimeRemainingColumn' for arg in args):
+                found_time_remaining = True
+                break
+
+        self.assertTrue(found_time_remaining, "TimeRemainingColumn not found in Progress initialization")
+
     def setUp(self):
         # Create a fake home directory for XDG_STATE_HOME
         self.test_dir = tempfile.mkdtemp()
