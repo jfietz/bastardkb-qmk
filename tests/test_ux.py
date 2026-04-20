@@ -171,5 +171,24 @@ class TestUX(unittest.TestCase):
             # verify exit was called
             mock_exit.assert_called_once_with(1)
 
+    def test_progress_includes_time_remaining(self):
+        """Verify that TimeRemainingColumn is included in the Progress configuration."""
+        import bastardkb_build_releases as bkb
+        with patch("bastardkb_build_releases.Progress") as mock_progress:
+            # We don't want the actual build to run, just trigger the progress instantiation
+            executor = MagicMock()
+            reporter = MagicMock()
+
+            # The firmware list can be empty to avoid iteration
+            bkb.build(executor, reporter, [], MagicMock())
+
+            # Check the instantiation args for Progress
+            found_time_remaining = False
+            for args, kwargs in mock_progress.call_args_list:
+                if any('TimeRemainingColumn' in str(arg) for arg in args) or any('TimeRemainingColumn' in getattr(arg, '__class__', type(None)).__name__ for arg in args):
+                    found_time_remaining = True
+                    break
+            self.assertTrue(found_time_remaining, "TimeRemainingColumn was not found in Progress initialization")
+
 if __name__ == '__main__':
     unittest.main()
