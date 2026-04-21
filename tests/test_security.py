@@ -135,5 +135,15 @@ class TestSecurity(unittest.TestCase):
             self.assertFalse(dst.exists(), "Symlink was copied, exposing arbitrary file read!")
 
 
+    def test_reporter_cleans_up_log_dir(self):
+        reporter = bkb.Reporter(verbose=False)
+        log_dir = reporter.log_dir
+        self.assertTrue(os.path.isdir(log_dir))
+        del reporter
+        # Explicitly call gc.collect() to ensure the temporary directory object is collected and cleaned up immediately in some python versions/implementations if the reference was bound
+        import gc
+        gc.collect()
+        self.assertFalse(os.path.isdir(log_dir), "Temporary directory was not cleaned up, causing a resource leak!")
+
 if __name__ == '__main__':
     unittest.main()

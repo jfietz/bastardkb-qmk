@@ -208,7 +208,8 @@ class Reporter(object):
         self.logging.addHandler(logging_file_handler)
         self.logging.setLevel(level=logging.DEBUG)
 
-        self.log_dir = tempfile.mkdtemp()
+        self._log_dir_obj = tempfile.TemporaryDirectory()
+        self.log_dir = self._log_dir_obj.name
         self.debug(f"Saving build logs in: {self.log_dir}")
         self.debug(f"Saving application logs in: {self.app_log_dir}")
 
