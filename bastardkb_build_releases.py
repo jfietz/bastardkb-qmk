@@ -216,7 +216,8 @@ class Reporter(object):
         self._progress_status = lambda _: None
 
     def log_file(self, basename: str) -> Path:
-        return Path(self.log_dir, basename).with_suffix(".log")
+        safe_basename = basename.replace("/", "_").replace("\\", "_")
+        return Path(self.log_dir, safe_basename).with_suffix(".log")
 
     def set_progress_status(self, progress_status: Callable[[str], None]) -> None:
         self._progress_status = progress_status
