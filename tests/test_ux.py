@@ -171,5 +171,22 @@ class TestUX(unittest.TestCase):
             # verify exit was called
             mock_exit.assert_called_once_with(1)
 
+    @patch("bastardkb_build_releases.Live")
+    @patch("bastardkb_build_releases.Progress")
+    @patch("bastardkb_build_releases.TimeRemainingColumn")
+    def test_progress_includes_time_remaining(self, mock_time_remaining, mock_progress_class, mock_live):
+        # TimeRemainingColumn should be used in Progress
+        reporter = bkb.Reporter(verbose=False)
+        reporter.console = MagicMock()
+        executor = MagicMock()
+        executor.dry_run = True
+
+        bkb.build(executor, reporter, [], lambda x: None)
+
+        self.assertTrue(hasattr(bkb, 'TimeRemainingColumn'), "TimeRemainingColumn not imported")
+
+        # Checking if TimeRemainingColumn was instantiated
+        self.assertTrue(mock_time_remaining.called, "TimeRemainingColumn was not instantiated")
+
 if __name__ == '__main__':
     unittest.main()
