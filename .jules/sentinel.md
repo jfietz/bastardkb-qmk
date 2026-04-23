@@ -22,3 +22,8 @@
 **Vulnerability:** Insecure file iteration using `Path.is_file()` during via.json copying in `bastardkb_build_releases.py`. Because `is_file()` follows symlinks by default, an attacker could create a symlink in the untrusted `via` directory pointing to a sensitive file outside the repository (e.g., `/etc/passwd`). The script would then read and copy the contents of the sensitive file to the output directory.
 **Learning:** `Path.is_file()` follows symlinks natively. When traversing or processing files from untrusted or shared directories, relying solely on `is_file()` can lead to arbitrary file read vulnerabilities if the file is copied or read.
 **Prevention:** Always explicitly check for and reject symlinks when processing files from untrusted directories, using `f.is_file() and not f.is_symlink()`.
+
+## 2026-11-25 - Path Traversal in Log Files
+**Vulnerability:** Path traversal vulnerability in `Reporter.log_file`. The `basename` parameter (which can be derived from branch names containing `/` or `\`) is used without sanitization to construct the log file path.
+**Learning:** `pathlib.Path` concatenates paths without sanitizing directory separators (`/` or `\`). User inputs like git branch names must be explicitly sanitized to prevent path traversal vulnerabilities and `FileNotFoundError` crashes.
+**Prevention:** Always sanitize inputs used to construct paths by replacing directory separators (e.g., replacing `/` and `\` with `_`) to prevent path traversal.

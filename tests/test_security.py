@@ -111,6 +111,13 @@ class TestSecurity(unittest.TestCase):
             self.assertFalse(dst.is_symlink())
             self.assertEqual(dst.read_text(), "via config content")
 
+    def test_log_file_sanitization(self):
+        reporter = bkb.Reporter(verbose=False)
+        malicious_basename = "../../../etc/passwd"
+        log_file = reporter.log_file(malicious_basename)
+        self.assertEqual(log_file.name, ".._.._.._etc_passwd.log")
+        self.assertEqual(log_file.parent, Path(reporter.log_dir))
+
     def test_copy_assets_prevents_arbitrary_file_read_via_symlink(self):
         with tempfile.TemporaryDirectory() as td:
             td_path = Path(td)
