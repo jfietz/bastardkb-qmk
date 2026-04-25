@@ -171,5 +171,23 @@ class TestUX(unittest.TestCase):
             # verify exit was called
             mock_exit.assert_called_once_with(1)
 
+    @patch("bastardkb_build_releases.SecureRotatingFileHandler")
+    @patch("bastardkb_build_releases.Progress")
+    def test_time_remaining_column_used(self, mock_progress, mock_handler):
+        import bastardkb_build_releases as bkb
+        mock_handler.return_value.level = 0
+        reporter = bkb.Reporter(verbose=False)
+        executor = MagicMock()
+
+        bkb.build(executor, reporter, [], lambda x: None)
+
+        found_time_remaining = False
+        for call in mock_progress.call_args_list:
+            args, kwargs = call
+            if any('TimeRemainingColumn' in str(arg) for arg in args):
+                found_time_remaining = True
+                break
+        self.assertTrue(found_time_remaining, "TimeRemainingColumn was not added to Progress")
+
 if __name__ == '__main__':
     unittest.main()
