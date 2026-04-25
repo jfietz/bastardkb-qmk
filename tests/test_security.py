@@ -22,6 +22,19 @@ sys.modules["rich.text"] = MagicMock()
 import bastardkb_build_releases as bkb
 
 class TestSecurity(unittest.TestCase):
+    def test_log_file_prevents_path_traversal_and_truncation(self):
+        reporter = bkb.Reporter(verbose=False)
+
+        # Test that path traversal characters are replaced
+        basename_traversal = "../../../etc/passwd"
+        log_file = reporter.log_file(basename_traversal)
+        self.assertEqual(log_file.name, ".._.._.._etc_passwd.log")
+
+        # Test that dot extensions are not truncated
+        basename_dots = "feature.branch.with.dots"
+        log_file_dots = reporter.log_file(basename_dots)
+        self.assertEqual(log_file_dots.name, "feature.branch.with.dots.log")
+
     def setUp(self):
         self.reporter = MagicMock()
         self.repository = MagicMock()
