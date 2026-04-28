@@ -171,5 +171,44 @@ class TestUX(unittest.TestCase):
             # verify exit was called
             mock_exit.assert_called_once_with(1)
 
+    @patch("bastardkb_build_releases.RotatingFileHandler")
+    def test_progress_has_time_remaining(self, mock_handler):
+        """Verify that TimeRemainingColumn is included in the progress display."""
+        # Ensure level attribute on mock to prevent errors
+        mock_handler.return_value.level = 0
+
+        reporter = bkb.Reporter(verbose=False)
+        reporter.console = MagicMock()
+
+        executor = MagicMock()
+        executor.dry_run = True
+        executor.git_ensure_worktree.return_value = MagicMock()
+        executor.qmk_compile.return_value = MagicMock(returncode=0)
+
+        # Test the progress configuration by calling build with an empty list
+        with patch.object(bkb, "Live") as mock_live:
+            bkb.build(executor, reporter, [], lambda x: None)
+
+            # The progress components are configured before Live is entered.
+            # We can verify that sys.modules["rich.progress"].Progress was called
+            # with TimeRemainingColumn.
+
+            # Check the constructor arguments of Progress
+            progress_mock = sys.modules["rich.progress"].Progress
+
+            # Find the call that sets up `overall_progress`
+            # overall_progress has MofNCompleteColumn, BarColumn, TextColumn, TimeElapsedColumn, TimeRemainingColumn
+            found_time_remaining = False
+            for call_args, call_kwargs in progress_mock.call_args_list:
+                # Check if any of the positional arguments is a TimeRemainingColumn mock
+                for arg in call_args:
+                    if "TimeRemainingColumn" in str(arg):
+                        found_time_remaining = True
+                        break
+                if found_time_remaining:
+                    break
+
+            self.assertTrue(found_time_remaining, "TimeRemainingColumn was not found in Progress initialization")
+
 if __name__ == '__main__':
     unittest.main()
