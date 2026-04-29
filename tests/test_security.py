@@ -134,6 +134,16 @@ class TestSecurity(unittest.TestCase):
             dst = out_dir / "test.via.json"
             self.assertFalse(dst.exists(), "Symlink was copied, exposing arbitrary file read!")
 
+    def test_log_file_path_traversal_prevention(self):
+        with patch.dict(os.environ, {"XDG_STATE_HOME": tempfile.mkdtemp()}):
+            reporter = bkb.Reporter(verbose=False)
+            log_file = reporter.log_file("../../../etc/passwd")
+            self.assertEqual(log_file, Path(reporter.log_dir, ".._.._.._etc_passwd.log"))
+
+            # Test that truncation does not happen with dots
+            log_file_2 = reporter.log_file("firmware.version.1")
+            self.assertEqual(log_file_2, Path(reporter.log_dir, "firmware.version.1.log"))
+
 
 if __name__ == '__main__':
     unittest.main()
