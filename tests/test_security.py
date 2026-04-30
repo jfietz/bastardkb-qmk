@@ -134,6 +134,13 @@ class TestSecurity(unittest.TestCase):
             dst = out_dir / "test.via.json"
             self.assertFalse(dst.exists(), "Symlink was copied, exposing arbitrary file read!")
 
+    @patch.dict(os.environ, {"XDG_STATE_HOME": tempfile.mkdtemp()})
+    def test_reporter_log_file_prevents_path_traversal(self):
+        reporter = bkb.Reporter(verbose=False)
+        log_file_path = reporter.log_file("test/../../secret")
+        self.assertEqual(log_file_path.name, "test_.._.._secret.log")
+        self.assertTrue(str(reporter.log_dir) in str(log_file_path))
+
 
 if __name__ == '__main__':
     unittest.main()
