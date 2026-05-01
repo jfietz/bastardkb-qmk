@@ -134,6 +134,24 @@ class TestSecurity(unittest.TestCase):
             dst = out_dir / "test.via.json"
             self.assertFalse(dst.exists(), "Symlink was copied, exposing arbitrary file read!")
 
+    @patch("bastardkb_build_releases.SecureRotatingFileHandler")
+    def test_log_file_sanitization_prevents_path_traversal(self, mock_handler):
+        mock_handler.return_value.level = 0
+        with tempfile.TemporaryDirectory() as td:
+            with patch.dict(os.environ, {"XDG_STATE_HOME": td}):
+                reporter = bkb.Reporter(verbose=False)
+
+                path = reporter.log_file("git-submodule-update-feature/awesome-branch.v1.0")
+                self.assertEqual(path.name, "git-submodule-update-feature_awesome-branch.v1.0.log")
+                self.assertNotIn("feature/", str(path))
+                self.assertNotIn("feature\\", str(path))
+
+                # Test with path traversal dots
+                path = reporter.log_file("git-submodule-update-../../../etc/passwd")
+                self.assertEqual(path.name, "git-submodule-update-.._.._.._etc_passwd.log")
+                # Ensure it remains inside log_dir
+                self.assertTrue(str(path).startswith(str(reporter.log_dir)))
+
 
 if __name__ == '__main__':
     unittest.main()
