@@ -25,3 +25,6 @@
 ## 2024-05-28 - [Invalid Input Error Visibility]
 **Learning:** Raw Python tracebacks resulting from invalid user input (e.g. malformed regexes using standard library `re`) create an intimidating and confusing CLI experience. Catching expected standard library exceptions to show clean, styled error panels helps users immediately identify and fix input errors instead of treating them as application crashes.
 **Action:** When accepting user input that relies on standard library parsing (like regular expressions or URLs), anticipate standard exceptions (like `re.error`) and catch them to surface clear, actionable messages formatted nicely using the tool's UX conventions.
+## 2024-05-15 - Add estimated time remaining to build progress
+**Learning:** Users experience wait anxiety during long-running batch operations when only elapsed time is shown.
+**Action:** Always pair `TimeElapsedColumn` with `TimeRemainingColumn` in progress bars for batch tasks to provide a clear estimated completion time.
