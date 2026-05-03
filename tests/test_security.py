@@ -135,5 +135,31 @@ class TestSecurity(unittest.TestCase):
             self.assertFalse(dst.exists(), "Symlink was copied, exposing arbitrary file read!")
 
 
+    def test_log_file_path_traversal_prevention(self):
+        # We want to make sure Reporter.log_file() doesn't allow path traversal
+        reporter = bkb.Reporter(verbose=False)
+        reporter.log_dir = "/tmp/logs"
+
+        # Branch name with path traversal
+        malicious_basename = "git-submodule-update-../../etc/passwd"
+
+        log_path = reporter.log_file(malicious_basename)
+
+        # Verify that the path traversal is prevented by sanitizing separators
+        self.assertEqual(str(log_path), "/tmp/logs/git-submodule-update-.._.._etc_passwd.log")
+
+    def test_log_file_with_suffix_truncation_prevention(self):
+        reporter = bkb.Reporter(verbose=False)
+        reporter.log_dir = "/tmp/logs"
+
+        # A name with dots
+        basename_with_dots = "branch.with.dots"
+
+        log_path = reporter.log_file(basename_with_dots)
+
+        # Ensure it appends .log instead of truncating at the dot
+        self.assertEqual(str(log_path), "/tmp/logs/branch.with.dots.log")
+
+
 if __name__ == '__main__':
     unittest.main()
