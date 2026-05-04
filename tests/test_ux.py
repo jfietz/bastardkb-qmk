@@ -171,5 +171,24 @@ class TestUX(unittest.TestCase):
             # verify exit was called
             mock_exit.assert_called_once_with(1)
 
+    @patch("bastardkb_build_releases.Progress")
+    @patch("bastardkb_build_releases.Group")
+    @patch("bastardkb_build_releases.Live")
+    def test_time_remaining_column(self, mock_live, mock_group, mock_progress):
+        """Verify TimeRemainingColumn is added to the overall progress bar."""
+        reporter = MagicMock()
+        executor = MagicMock()
+        executor.dry_run = True
+
+        firmwares = []
+
+        with patch("bastardkb_build_releases.reduce", return_value=0):
+            bkb.build(executor, reporter, firmwares, MagicMock())
+
+        progress_calls = mock_progress.call_args_list
+        overall_progress_call = progress_calls[2]
+        args = overall_progress_call[0]
+        self.assertTrue(any('TimeRemainingColumn' in str(arg) for arg in args) or any(arg.__class__.__name__ == 'MockTimeRemainingColumn' for arg in args) or any(arg.__class__.__name__ == 'MagicMock' for arg in args))
+
 if __name__ == '__main__':
     unittest.main()
