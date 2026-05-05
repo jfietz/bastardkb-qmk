@@ -22,3 +22,8 @@
 **Vulnerability:** Insecure file iteration using `Path.is_file()` during via.json copying in `bastardkb_build_releases.py`. Because `is_file()` follows symlinks by default, an attacker could create a symlink in the untrusted `via` directory pointing to a sensitive file outside the repository (e.g., `/etc/passwd`). The script would then read and copy the contents of the sensitive file to the output directory.
 **Learning:** `Path.is_file()` follows symlinks natively. When traversing or processing files from untrusted or shared directories, relying solely on `is_file()` can lead to arbitrary file read vulnerabilities if the file is copied or read.
 **Prevention:** Always explicitly check for and reject symlinks when processing files from untrusted directories, using `f.is_file() and not f.is_symlink()`.
+
+## 2024-05-05 - Path Traversal in Log File Creation
+**Vulnerability:** The `Reporter.log_file` method concatenated unsanitized user input (like branch names) directly into a file path, allowing path traversal vulnerabilities (e.g., writing to `../../../etc/passwd.log`) and causing `FileNotFoundError` when valid branch names contained slashes (e.g., `feature/branch`).
+**Learning:** `pathlib.Path` resolution does not inherently protect against path traversal when unsanitized strings containing `/`, `\`, or `..` are passed to it. Additionally, `Path.with_suffix()` can incorrectly truncate filenames if the unsanitized input contains dots.
+**Prevention:** Always sanitize directory separators in user-provided filename strings (e.g., using `.replace("/", "_").replace("\\", "_")`) before passing them to `Path`. Use string formatting for predictable extensions instead of `with_suffix()` on arbitrary strings.
