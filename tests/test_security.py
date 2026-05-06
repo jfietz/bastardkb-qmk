@@ -134,6 +134,20 @@ class TestSecurity(unittest.TestCase):
             dst = out_dir / "test.via.json"
             self.assertFalse(dst.exists(), "Symlink was copied, exposing arbitrary file read!")
 
+    def test_reporter_log_file_path_traversal(self):
+        reporter = bkb.Reporter(verbose=False)
+        log_dir = reporter.log_dir
+
+        # Test path traversal prevention
+        path1 = reporter.log_file("../../../etc/passwd")
+        self.assertEqual(path1.name, ".._.._.._etc_passwd.log")
+        self.assertEqual(str(path1.parent), str(Path(log_dir)))
+
+        # Test safe handling of dots
+        path2 = reporter.log_file("firmware.v1.2.3")
+        self.assertEqual(path2.name, "firmware.v1.2.3.log")
+        self.assertEqual(str(path2.parent), str(Path(log_dir)))
+
 
 if __name__ == '__main__':
     unittest.main()
