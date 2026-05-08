@@ -25,3 +25,6 @@
 ## 2024-05-28 - [Invalid Input Error Visibility]
 **Learning:** Raw Python tracebacks resulting from invalid user input (e.g. malformed regexes using standard library `re`) create an intimidating and confusing CLI experience. Catching expected standard library exceptions to show clean, styled error panels helps users immediately identify and fix input errors instead of treating them as application crashes.
 **Action:** When accepting user input that relies on standard library parsing (like regular expressions or URLs), anticipate standard exceptions (like `re.error`) and catch them to surface clear, actionable messages formatted nicely using the tool's UX conventions.
+## 2025-02-24 - Added TimeRemainingColumn to Progress Bar
+**Learning:** Long-running batch operations in CLI tools without a time estimation cause wait anxiety for users. While `TimeElapsedColumn` is helpful, it lacks predictability.
+**Action:** Always include a `TimeRemainingColumn` alongside `TimeElapsedColumn` when using `rich.progress` for batch operations to provide clear expectations to users.
