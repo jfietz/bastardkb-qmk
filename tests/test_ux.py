@@ -171,5 +171,28 @@ class TestUX(unittest.TestCase):
             # verify exit was called
             mock_exit.assert_called_once_with(1)
 
+    @patch("bastardkb_build_releases.Progress")
+    def test_progress_bar_includes_time_remaining(self, mock_progress):
+        """Verify that the Progress bar includes a TimeRemainingColumn."""
+        import bastardkb_build_releases as bkb
+
+        # We need to test if TimeRemainingColumn is in the arguments to Progress
+        reporter = MagicMock()
+        executor = MagicMock()
+        firmwares = []
+
+        # mock the total count reduce so it doesn't fail
+        with patch("bastardkb_build_releases.reduce", return_value=0):
+            bkb.build(executor, reporter, firmwares, lambda x: None)
+
+        # Check that at least one Progress call had TimeRemainingColumn
+        found = False
+        for call in mock_progress.call_args_list:
+            args, kwargs = call
+            if any('TimeRemainingColumn' in str(arg) for arg in args) or any('TimeRemainingColumn' in str(arg.__class__.__name__) for arg in args):
+                found = True
+                break
+        self.assertTrue(found, "TimeRemainingColumn not found in Progress initialization")
+
 if __name__ == '__main__':
     unittest.main()
