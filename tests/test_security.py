@@ -134,6 +134,22 @@ class TestSecurity(unittest.TestCase):
             dst = out_dir / "test.via.json"
             self.assertFalse(dst.exists(), "Symlink was copied, exposing arbitrary file read!")
 
+    def test_log_file_path_traversal_prevention(self):
+        reporter = bkb.Reporter(verbose=False)
+        reporter.log_dir = "/tmp/mock_logs"
+
+        # Test branch name with slashes
+        log_path = reporter.log_file("git-submodule-update-feature/branch/name")
+        self.assertEqual(str(log_path), "/tmp/mock_logs/git-submodule-update-feature_branch_name.log")
+
+        # Test path traversal attempts
+        log_path = reporter.log_file("../../../etc/passwd")
+        self.assertEqual(str(log_path), "/tmp/mock_logs/.._.._.._etc_passwd.log")
+
+        # Test with dots (with_suffix bug)
+        log_path = reporter.log_file("file.with.dots")
+        self.assertEqual(str(log_path), "/tmp/mock_logs/file.with.dots.log")
+
 
 if __name__ == '__main__':
     unittest.main()
