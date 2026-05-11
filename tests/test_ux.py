@@ -171,5 +171,31 @@ class TestUX(unittest.TestCase):
             # verify exit was called
             mock_exit.assert_called_once_with(1)
 
+    @patch('bastardkb_build_releases.Progress')
+    @patch('bastardkb_build_releases.Group')
+    @patch('bastardkb_build_releases.Live')
+    def test_time_remaining_column_included(self, mock_live, mock_group, mock_progress):
+        # We need to test the overall_progress initialization.
+        # It's inside `def build`.
+        mock_progress_instance = MagicMock()
+        mock_progress.return_value = mock_progress_instance
+
+        executor = MagicMock()
+        reporter = MagicMock()
+        firmwares = []
+
+        bkb.build(executor, reporter, firmwares, lambda p: None)
+
+        # Check call arguments of Progress to find overall_progress
+        overall_progress_call_found = False
+        for call_args in mock_progress.call_args_list:
+            args = call_args[0]
+            # TimeRemainingColumn should be among the arguments
+            if any('TimeRemainingColumn' in str(arg) for arg in args) or any(arg.__class__.__name__ == 'TimeRemainingColumn' for arg in args):
+                overall_progress_call_found = True
+                break
+
+        self.assertTrue(overall_progress_call_found, "TimeRemainingColumn was not found in Progress initialization")
+
 if __name__ == '__main__':
     unittest.main()
