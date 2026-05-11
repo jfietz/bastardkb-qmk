@@ -134,6 +134,22 @@ class TestSecurity(unittest.TestCase):
             dst = out_dir / "test.via.json"
             self.assertFalse(dst.exists(), "Symlink was copied, exposing arbitrary file read!")
 
+    def test_log_file_prevents_path_traversal_and_truncation(self):
+        reporter_mock = MagicMock()
+        reporter_mock.log_dir = "/tmp/mock_log_dir"
+
+        # Test valid string
+        valid_path = str(bkb.Reporter.log_file(reporter_mock, "feature/branch"))
+        self.assertEqual(valid_path, os.path.join("/tmp/mock_log_dir", "feature_branch.log"))
+
+        # Test directory traversal characters
+        traversal_path = str(bkb.Reporter.log_file(reporter_mock, "../../etc/passwd"))
+        self.assertEqual(traversal_path, os.path.join("/tmp/mock_log_dir", ".._.._etc_passwd.log"))
+
+        # Test dots in basename (preventing with_suffix truncation)
+        version_path = str(bkb.Reporter.log_file(reporter_mock, "v1.0.0"))
+        self.assertEqual(version_path, os.path.join("/tmp/mock_log_dir", "v1.0.0.log"))
+
 
 if __name__ == '__main__':
     unittest.main()
