@@ -171,5 +171,41 @@ class TestUX(unittest.TestCase):
             # verify exit was called
             mock_exit.assert_called_once_with(1)
 
+    def test_progress_includes_time_remaining(self):
+        with patch('bastardkb_build_releases.Progress') as MockProgress, \
+             patch('bastardkb_build_releases.Live'), \
+             patch('bastardkb_build_releases.RotatingFileHandler'), \
+             patch('bastardkb_build_releases.read_firmware_filename_from_logs') as mock_read:
+
+            import bastardkb_build_releases as bkb
+            from pathlib import Path
+            mock_read.return_value = Path("test.uf2")
+
+            reporter = bkb.Reporter(verbose=False)
+            executor = MagicMock()
+
+            fw = bkb.Firmware("kb", "km")
+            fw_list = bkb.FirmwareList("main", [fw])
+
+            completed_process = MagicMock()
+            completed_process.returncode = 0
+            completed_process.log_file = Path("test.log")
+            executor.qmk_compile.return_value = completed_process
+            executor.git_ensure_worktree.return_value = MagicMock()
+
+            def mock_on_compiled(path):
+                pass
+
+            bkb.build(executor, reporter, [fw_list], mock_on_compiled)
+
+            found_time_remaining = False
+            for call in MockProgress.call_args_list:
+                args, kwargs = call
+                if any('TimeRemainingColumn' in str(arg) for arg in args):
+                    found_time_remaining = True
+                    break
+
+            self.assertTrue(found_time_remaining, "TimeRemainingColumn not found in Progress initialization")
+
 if __name__ == '__main__':
     unittest.main()
