@@ -134,6 +134,18 @@ class TestSecurity(unittest.TestCase):
             dst = out_dir / "test.via.json"
             self.assertFalse(dst.exists(), "Symlink was copied, exposing arbitrary file read!")
 
+    def test_log_file_path_traversal_sanitization(self):
+        reporter = MagicMock()
+        reporter.log_dir = "/tmp/mock_log_dir"
+
+        malicious_basename = "../../../etc/passwd"
+        log_path = bkb.Reporter.log_file(reporter, malicious_basename)
+
+        # Verify that slashes are replaced with underscores and .log is appended correctly
+        expected_filename = ".._.._.._etc_passwd.log"
+        self.assertEqual(log_path.name, expected_filename)
+        self.assertEqual(str(log_path.parent), reporter.log_dir)
+
 
 if __name__ == '__main__':
     unittest.main()
