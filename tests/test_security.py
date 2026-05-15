@@ -134,6 +134,23 @@ class TestSecurity(unittest.TestCase):
             dst = out_dir / "test.via.json"
             self.assertFalse(dst.exists(), "Symlink was copied, exposing arbitrary file read!")
 
+    @patch("bastardkb_build_releases.SecureRotatingFileHandler")
+    def test_log_file_prevents_path_traversal(self, mock_handler):
+        mock_handler.return_value.level = 0
+        with tempfile.TemporaryDirectory() as td:
+            with patch.dict(os.environ, {"XDG_STATE_HOME": td}):
+                reporter = bkb.Reporter(verbose=False)
+
+                # Test with branch name containing slashes
+                log_path = reporter.log_file("feature/branch")
+                self.assertEqual(log_path.name, "feature_branch.log")
+                self.assertEqual(str(log_path.parent), reporter.log_dir)
+
+                # Test with path traversal characters
+                malicious_path = reporter.log_file("../../../etc/passwd")
+                self.assertEqual(malicious_path.name, ".._.._.._etc_passwd.log")
+                self.assertEqual(str(malicious_path.parent), reporter.log_dir)
+
 
 if __name__ == '__main__':
     unittest.main()
