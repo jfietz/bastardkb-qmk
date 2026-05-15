@@ -171,5 +171,26 @@ class TestUX(unittest.TestCase):
             # verify exit was called
             mock_exit.assert_called_once_with(1)
 
+    @patch("bastardkb_build_releases.Progress")
+    @patch("bastardkb_build_releases.Reporter")
+    @patch("bastardkb_build_releases.Executor")
+    @patch("bastardkb_build_releases.Live")
+    def test_time_remaining_column(self, mock_live, mock_executor, mock_reporter, mock_progress):
+        import bastardkb_build_releases as bkb
+        # We need to test if TimeRemainingColumn is instantiated and passed to Progress
+        # when build() is called.
+        executor = mock_executor.return_value
+        reporter = mock_reporter.return_value
+        bkb.build(executor, reporter, [], lambda x: None)
+
+        # Check if TimeRemainingColumn was used in the Progress initialization
+        found = False
+        for call_args in mock_progress.call_args_list:
+            args, _ = call_args
+            if any('TimeRemainingColumn' in str(arg) for arg in args) or any(arg.__class__.__name__ == 'TimeRemainingColumn' for arg in args):
+                found = True
+                break
+        self.assertTrue(found, "TimeRemainingColumn not found in Progress initialization")
+
 if __name__ == '__main__':
     unittest.main()
