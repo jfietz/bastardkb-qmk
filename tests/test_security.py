@@ -134,6 +134,20 @@ class TestSecurity(unittest.TestCase):
             dst = out_dir / "test.via.json"
             self.assertFalse(dst.exists(), "Symlink was copied, exposing arbitrary file read!")
 
+    def test_log_file_sanitizes_path_traversal(self):
+        mock_reporter = MagicMock()
+        mock_reporter.log_dir = "/tmp"
+
+        # Test path with slashes
+        log_path = bkb.Reporter.log_file(mock_reporter, "feature/branch/name")
+        self.assertEqual(log_path.name, "feature_branch_name.log")
+        self.assertEqual(log_path.parent, Path("/tmp"))
+
+        # Test path traversal attempt
+        log_path_traversal = bkb.Reporter.log_file(mock_reporter, "../../../etc/passwd")
+        self.assertEqual(log_path_traversal.name, ".._.._.._etc_passwd.log")
+        self.assertEqual(log_path_traversal.parent, Path("/tmp"))
+
 
 if __name__ == '__main__':
     unittest.main()
