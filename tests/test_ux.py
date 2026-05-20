@@ -171,5 +171,31 @@ class TestUX(unittest.TestCase):
             # verify exit was called
             mock_exit.assert_called_once_with(1)
 
+    @patch("bastardkb_build_releases.Live")
+    @patch("bastardkb_build_releases.Progress")
+    def test_progress_includes_time_remaining(self, mock_progress, mock_live):
+        import bastardkb_build_releases as bkb
+        with patch('bastardkb_build_releases.TimeRemainingColumn') as mock_time_remaining, \
+             patch('bastardkb_build_releases.TimeElapsedColumn') as mock_time_elapsed, \
+             patch('bastardkb_build_releases.MofNCompleteColumn') as mock_mofn, \
+             patch('bastardkb_build_releases.BarColumn') as mock_bar, \
+             patch('bastardkb_build_releases.TextColumn') as mock_text:
+
+            reporter = MagicMock()
+            executor = MagicMock()
+            bkb.build(executor, reporter, [], MagicMock())
+
+            self.assertTrue(mock_progress.called)
+
+            found_overall_progress = False
+            for call in mock_progress.call_args_list:
+                args, kwargs = call
+                if mock_mofn.return_value in args:
+                    found_overall_progress = True
+                    self.assertIn(mock_time_remaining.return_value, args, "TimeRemainingColumn not found in Progress initialization")
+                    break
+
+            self.assertTrue(found_overall_progress, "Could not find overall_progress initialization")
+
 if __name__ == '__main__':
     unittest.main()
