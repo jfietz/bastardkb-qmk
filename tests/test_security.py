@@ -134,6 +134,17 @@ class TestSecurity(unittest.TestCase):
             dst = out_dir / "test.via.json"
             self.assertFalse(dst.exists(), "Symlink was copied, exposing arbitrary file read!")
 
+    @patch("bastardkb_build_releases.SecureRotatingFileHandler")
+    def test_log_file_path_traversal(self, mock_handler):
+        mock_handler.return_value.level = 0
+        reporter = bkb.Reporter(verbose=False)
+
+        basename = "../../../etc/passwd"
+        log_file = reporter.log_file(basename)
+
+        self.assertEqual(log_file.parent, Path(reporter.log_dir))
+        self.assertEqual(log_file.name, ".._.._.._etc_passwd.log")
+
 
 if __name__ == '__main__':
     unittest.main()
