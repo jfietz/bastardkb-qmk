@@ -171,5 +171,37 @@ class TestUX(unittest.TestCase):
             # verify exit was called
             mock_exit.assert_called_once_with(1)
 
+    def test_build_progress_columns(self):
+        """Verify that TimeRemainingColumn is used in the progress bar."""
+        with patch("bastardkb_build_releases.Progress") as mock_progress, \
+             patch("bastardkb_build_releases.Live"), \
+             patch("bastardkb_build_releases.Group"):
+
+            import bastardkb_build_releases as bkb
+
+            executor = MagicMock()
+            executor.dry_run = True
+            reporter = MagicMock()
+            reporter.console = MagicMock()
+
+            bkb.build(executor, reporter, [], MagicMock())
+
+            overall_progress_call = None
+            for call in mock_progress.call_args_list:
+                args, kwargs = call
+                if 'console' in kwargs:
+                    overall_progress_call = args
+                    break
+
+            self.assertIsNotNone(overall_progress_call, "Progress with console kwarg not found")
+
+            # Since TimeRemainingColumn is mocked in sys.modules, its instance (return_value of the class mock)
+            # is what gets passed to Progress. We check specifically for it.
+            self.assertIn(
+                bkb.TimeRemainingColumn.return_value,
+                overall_progress_call,
+                "TimeRemainingColumn not found in overall_progress args"
+            )
+
 if __name__ == '__main__':
     unittest.main()
