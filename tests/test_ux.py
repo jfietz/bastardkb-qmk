@@ -171,5 +171,35 @@ class TestUX(unittest.TestCase):
             # verify exit was called
             mock_exit.assert_called_once_with(1)
 
+
+    @patch('bastardkb_build_releases.Reporter')
+    @patch('bastardkb_build_releases.Executor')
+    @patch('bastardkb_build_releases.Progress')
+    @patch('bastardkb_build_releases.TimeRemainingColumn')
+    def test_progress_includes_time_remaining(self, mock_time_remaining_column, mock_progress, mock_executor, mock_reporter):
+        """Verify that TimeRemainingColumn is included in overall_progress to reduce wait anxiety."""
+        firmwares = [
+            bkb.FirmwareList(
+                "main",
+                (bkb.Firmware("keyboard", "keymap", "env", "output_filename"),)
+            )
+        ]
+
+        bkb.build(
+            mock_executor,
+            mock_reporter,
+            firmwares,
+            lambda path: None
+        )
+
+        found = False
+        for call in mock_progress.call_args_list:
+            args, kwargs = call
+            if mock_time_remaining_column.return_value in args:
+                found = True
+                break
+
+        self.assertTrue(found, "TimeRemainingColumn was not passed to Progress")
+
 if __name__ == '__main__':
     unittest.main()
