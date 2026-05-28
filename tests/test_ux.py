@@ -171,5 +171,21 @@ class TestUX(unittest.TestCase):
             # verify exit was called
             mock_exit.assert_called_once_with(1)
 
+    @patch("bastardkb_build_releases.Progress")
+    def test_progress_bar_includes_eta(self, mock_progress):
+        import bastardkb_build_releases as bkb
+        with patch("bastardkb_build_releases.RotatingFileHandler") as mock_handler:
+            mock_handler.return_value.level = 0
+            reporter = bkb.Reporter(verbose=False)
+        executor = MagicMock()
+        bkb.build(executor, reporter, [], lambda x: None)
+
+        found_time_remaining = False
+        for args, kwargs in mock_progress.call_args_list:
+            if any('TimeRemainingColumn' in str(arg) for arg in args):
+                found_time_remaining = True
+                break
+        self.assertTrue(found_time_remaining, "TimeRemainingColumn should be used in the overall_progress bar")
+
 if __name__ == '__main__':
     unittest.main()
