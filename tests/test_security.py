@@ -134,6 +134,23 @@ class TestSecurity(unittest.TestCase):
             dst = out_dir / "test.via.json"
             self.assertFalse(dst.exists(), "Symlink was copied, exposing arbitrary file read!")
 
+    def test_reporter_log_file_sanitizes_path_traversal(self):
+        import bastardkb_build_releases as bkb
+        reporter = bkb.Reporter.__new__(bkb.Reporter)
+        reporter.log_dir = "/tmp/mock_log_dir"
+
+        # Test branch name with slashes
+        log_path = reporter.log_file("feature/branch_name")
+        self.assertEqual(log_path, Path("/tmp/mock_log_dir/feature_branch_name.log"))
+
+        # Test path traversal characters (slashes are replaced, dots remain)
+        log_path = reporter.log_file("../../../etc/passwd")
+        self.assertEqual(log_path, Path("/tmp/mock_log_dir/.._.._.._etc_passwd.log"))
+
+        # Test backslashes
+        log_path = reporter.log_file("windows\\style\\path")
+        self.assertEqual(log_path, Path("/tmp/mock_log_dir/windows_style_path.log"))
+
 
 if __name__ == '__main__':
     unittest.main()
