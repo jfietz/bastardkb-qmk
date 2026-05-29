@@ -135,5 +135,18 @@ class TestSecurity(unittest.TestCase):
             self.assertFalse(dst.exists(), "Symlink was copied, exposing arbitrary file read!")
 
 
+    def test_log_file_sanitizes_path_traversal(self):
+        reporter = bkb.Reporter.__new__(bkb.Reporter)
+        reporter.log_dir = "/tmp/mock_log_dir"
+
+        # Test basic sanitization
+        log_path = reporter.log_file("test/dir\\file")
+        self.assertEqual(log_path, Path("/tmp/mock_log_dir/test_dir_file.log"))
+
+        # Test path traversal sanitization
+        log_path = reporter.log_file("../../../etc/passwd")
+        self.assertEqual(log_path, Path("/tmp/mock_log_dir/.._.._.._etc_passwd.log"))
+
+
 if __name__ == '__main__':
     unittest.main()
