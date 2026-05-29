@@ -171,5 +171,24 @@ class TestUX(unittest.TestCase):
             # verify exit was called
             mock_exit.assert_called_once_with(1)
 
+    @patch("bastardkb_build_releases.Progress")
+    @patch("bastardkb_build_releases.Group")
+    @patch("bastardkb_build_releases.Live")
+    def test_progress_bar_includes_eta(self, mock_live, mock_group, mock_progress):
+        # We need to test the exact invocation of Progress in build()
+        executor = MagicMock()
+        reporter = MagicMock()
+        reporter.console = MagicMock()
+        bkb.build(executor, reporter, [], lambda x: None)
+
+        found_time_remaining = False
+        for call in mock_progress.call_args_list:
+            args, _ = call
+            if any('TimeRemainingColumn' in str(arg) for arg in args):
+                found_time_remaining = True
+                break
+
+        self.assertTrue(found_time_remaining, "TimeRemainingColumn not found in Progress initialization")
+
 if __name__ == '__main__':
     unittest.main()
