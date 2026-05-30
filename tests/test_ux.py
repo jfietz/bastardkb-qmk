@@ -171,5 +171,29 @@ class TestUX(unittest.TestCase):
             # verify exit was called
             mock_exit.assert_called_once_with(1)
 
+    def test_progress_bar_has_time_remaining(self):
+        import bastardkb_build_releases as bkb
+        reporter = bkb.Reporter.__new__(bkb.Reporter)
+        reporter.console = MagicMock()
+        reporter.info = MagicMock()
+        reporter.set_progress_status = MagicMock()
+        reporter.print_summary = MagicMock()
+
+        executor = MagicMock()
+        executor.dry_run = True
+
+        bkb.Progress.reset_mock()
+
+        # Call build with empty firmwares to avoid execution loop
+        bkb.build(executor, reporter, [], lambda x: None)
+
+        # overall_progress is the 3rd Progress instance created
+        overall_progress_call = bkb.Progress.call_args_list[2]
+        args, kwargs = overall_progress_call
+
+        # Verify TimeRemainingColumn was passed as an argument
+        has_time_remaining = any('TimeRemainingColumn' in str(arg) for arg in args)
+        self.assertTrue(has_time_remaining, "Progress bar should include TimeRemainingColumn")
+
 if __name__ == '__main__':
     unittest.main()
