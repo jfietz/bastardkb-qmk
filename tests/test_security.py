@@ -134,6 +134,20 @@ class TestSecurity(unittest.TestCase):
             dst = out_dir / "test.via.json"
             self.assertFalse(dst.exists(), "Symlink was copied, exposing arbitrary file read!")
 
+    def test_log_file_prevents_path_traversal(self):
+        import bastardkb_build_releases as bkb
+        reporter = bkb.Reporter.__new__(bkb.Reporter)
+        reporter.log_dir = "/tmp/mock_log_dir"
+
+        # Test path traversal payloads
+        payload = "../../../etc/passwd"
+        expected_basename = ".._.._.._etc_passwd.log"
+
+        result_path = reporter.log_file(payload)
+
+        self.assertEqual(result_path.name, expected_basename)
+        self.assertEqual(result_path.parent, Path(reporter.log_dir))
+
 
 if __name__ == '__main__':
     unittest.main()
