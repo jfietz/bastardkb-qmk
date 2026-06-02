@@ -134,6 +134,18 @@ class TestSecurity(unittest.TestCase):
             dst = out_dir / "test.via.json"
             self.assertFalse(dst.exists(), "Symlink was copied, exposing arbitrary file read!")
 
+    def test_log_file_path_traversal_sanitization(self):
+        with tempfile.TemporaryDirectory() as td:
+            with patch.dict(os.environ, {"XDG_STATE_HOME": td}):
+                reporter = bkb.Reporter.__new__(bkb.Reporter)
+                reporter.log_dir = Path(td)
+
+                malicious_basename = "../../../etc/passwd"
+                log_path = reporter.log_file(malicious_basename)
+
+                self.assertEqual(log_path.name, ".._.._.._etc_passwd.log")
+                self.assertEqual(log_path.parent, Path(td))
+
 
 if __name__ == '__main__':
     unittest.main()
