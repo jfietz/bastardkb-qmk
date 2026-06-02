@@ -171,5 +171,27 @@ class TestUX(unittest.TestCase):
             # verify exit was called
             mock_exit.assert_called_once_with(1)
 
+    @patch("bastardkb_build_releases.RotatingFileHandler")
+    def test_time_remaining_column(self, mock_handler):
+        mock_handler.return_value.level = 0
+        reporter = bkb.Reporter(verbose=False)
+        executor = MagicMock()
+        executor.dry_run = True
+
+        with patch("bastardkb_build_releases.Progress") as mock_progress:
+            bkb.build(executor, reporter, [], lambda x: None)
+
+            # Verify TimeRemainingColumn was passed to the Progress constructor
+            # Since it's a global mock, we check its string representation
+            found_time_remaining = False
+            for call in mock_progress.call_args_list:
+                args, kwargs = call
+                for arg in args:
+                    if "TimeRemainingColumn" in str(arg):
+                        found_time_remaining = True
+                        break
+
+            self.assertTrue(found_time_remaining, "TimeRemainingColumn not found in Progress initialization")
+
 if __name__ == '__main__':
     unittest.main()
