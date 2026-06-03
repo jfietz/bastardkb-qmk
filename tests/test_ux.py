@@ -171,5 +171,27 @@ class TestUX(unittest.TestCase):
             # verify exit was called
             mock_exit.assert_called_once_with(1)
 
+    @patch("bastardkb_build_releases.Progress")
+    def test_progress_bar_has_time_remaining(self, mock_progress):
+        # We need to bypass the entire execution loop.
+        mock_executor = MagicMock()
+        mock_reporter = bkb.Reporter.__new__(bkb.Reporter)
+        mock_reporter.console = MagicMock()
+        mock_reporter.logging = MagicMock()
+        mock_reporter.set_progress_status = MagicMock()
+        mock_reporter.app_log_dir = "/tmp"
+
+        bkb.build(mock_executor, mock_reporter, [], lambda p: None)
+
+        # Look through all Progress instantiation calls for a TimeRemainingColumn
+        found_time_remaining = False
+        for call in mock_progress.call_args_list:
+            args, kwargs = call
+            if any('TimeRemainingColumn' in str(arg) or arg.__class__.__name__ == 'TimeRemainingColumn' for arg in args):
+                found_time_remaining = True
+                break
+
+        self.assertTrue(found_time_remaining, "TimeRemainingColumn missing from Progress bar")
+
 if __name__ == '__main__':
     unittest.main()
