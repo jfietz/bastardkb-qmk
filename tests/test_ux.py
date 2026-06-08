@@ -171,5 +171,28 @@ class TestUX(unittest.TestCase):
             # verify exit was called
             mock_exit.assert_called_once_with(1)
 
+    @patch("bastardkb_build_releases.Progress")
+    @patch("bastardkb_build_releases.Reporter")
+    @patch("bastardkb_build_releases.Executor")
+    def test_build_ui_initialization(self, mock_executor, mock_reporter, mock_progress):
+        mock_reporter.app_log_dir = '/tmp'
+        bkb.build(mock_executor, mock_reporter, [], lambda x: None)
+
+        # Check that Progress was called with TimeRemainingColumn
+        # Progress is called multiple times, we need to inspect the calls
+        calls = mock_progress.call_args_list
+
+        has_time_remaining = False
+        for call in calls:
+            args, kwargs = call
+            for arg in args:
+                if "TimeRemainingColumn" in str(arg):
+                    has_time_remaining = True
+                    break
+            if has_time_remaining:
+                break
+
+        self.assertTrue(has_time_remaining, "TimeRemainingColumn not found in Progress initialization")
+
 if __name__ == '__main__':
     unittest.main()
