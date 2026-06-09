@@ -171,5 +171,28 @@ class TestUX(unittest.TestCase):
             # verify exit was called
             mock_exit.assert_called_once_with(1)
 
+    @patch("bastardkb_build_releases.Progress")
+    @patch("bastardkb_build_releases.TimeRemainingColumn")
+    def test_progress_bar_has_time_remaining(self, mock_time_remaining, mock_progress):
+        executor = MagicMock()
+        reporter = MagicMock()
+        reporter.console = MagicMock()
+
+        # Call build with empty firmwares to bypass loops safely
+        bkb.build(executor, reporter, [], MagicMock())
+
+        # Verify that TimeRemainingColumn was instantiated
+        self.assertTrue(mock_time_remaining.called, "TimeRemainingColumn should be used in progress bars")
+
+        # Verify Progress was called with TimeRemainingColumn instance
+        # Progress is instantiated multiple times, we check if any call contains mock_time_remaining()
+        time_remaining_instance = mock_time_remaining.return_value
+        found = False
+        for call_args in mock_progress.call_args_list:
+            if time_remaining_instance in call_args.args:
+                found = True
+                break
+        self.assertTrue(found, "Progress bar should include TimeRemainingColumn instance")
+
 if __name__ == '__main__':
     unittest.main()
