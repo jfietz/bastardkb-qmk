@@ -171,5 +171,21 @@ class TestUX(unittest.TestCase):
             # verify exit was called
             mock_exit.assert_called_once_with(1)
 
+    @patch("bastardkb_build_releases.RotatingFileHandler")
+    @patch("bastardkb_build_releases.TimeRemainingColumn")
+    @patch("bastardkb_build_releases.Progress")
+    def test_build_progress_bar_eta(self, mock_progress, mock_time_remaining, mock_handler):
+        """Verify the global progress bar includes an ETA indicator."""
+        mock_handler.return_value.level = 0
+        executor = MagicMock()
+        reporter = bkb.Reporter(verbose=False)
+        reporter.console = MagicMock()
+
+        # Call build with empty firmwares to avoid loop execution
+        bkb.build(executor, reporter, [], MagicMock())
+
+        # Verify TimeRemainingColumn was instantiated
+        self.assertTrue(mock_time_remaining.called, "TimeRemainingColumn should be instantiated")
+
 if __name__ == '__main__':
     unittest.main()
