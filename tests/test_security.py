@@ -134,6 +134,18 @@ class TestSecurity(unittest.TestCase):
             dst = out_dir / "test.via.json"
             self.assertFalse(dst.exists(), "Symlink was copied, exposing arbitrary file read!")
 
+    def test_log_file_path_traversal(self):
+        with tempfile.TemporaryDirectory() as td:
+            with patch.dict(os.environ, {"XDG_STATE_HOME": td}):
+                reporter = bkb.Reporter.__new__(bkb.Reporter)
+                reporter.log_dir = td
+
+                log_path = reporter.log_file("git-submodule-update-feature/branch")
+                self.assertEqual(log_path, Path(td) / "git-submodule-update-feature_branch.log")
+
+                traversal_path = reporter.log_file("../../../etc/passwd")
+                self.assertEqual(traversal_path, Path(td) / ".._.._.._etc_passwd.log")
+
 
 if __name__ == '__main__':
     unittest.main()

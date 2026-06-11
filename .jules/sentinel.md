@@ -22,3 +22,7 @@
 **Vulnerability:** Insecure file iteration using `Path.is_file()` during via.json copying in `bastardkb_build_releases.py`. Because `is_file()` follows symlinks by default, an attacker could create a symlink in the untrusted `via` directory pointing to a sensitive file outside the repository (e.g., `/etc/passwd`). The script would then read and copy the contents of the sensitive file to the output directory.
 **Learning:** `Path.is_file()` follows symlinks natively. When traversing or processing files from untrusted or shared directories, relying solely on `is_file()` can lead to arbitrary file read vulnerabilities if the file is copied or read.
 **Prevention:** Always explicitly check for and reject symlinks when processing files from untrusted directories, using `f.is_file() and not f.is_symlink()`.
+## 2024-05-24 - Path Traversal in Reporter log files
+**Vulnerability:** Path traversal and improper file extension handling in Reporter.log_file when basename contains directory separators (like branch names with slashes) or dots.
+**Learning:** `pathlib.Path.with_suffix()` incorrectly truncates the stem by treating text after the last dot as a file extension. Directory separators in user input concatenated with paths allow writing files outside the intended log directory.
+**Prevention:** Explicitly sanitize directory separators (`/` and `\`) and use f-strings or string concatenation for extensions before passing to `Path`.
