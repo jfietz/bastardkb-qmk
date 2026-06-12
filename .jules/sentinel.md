@@ -27,3 +27,8 @@
 **Vulnerability:** Path traversal possible when using unsanitized user inputs (like branch names containing slashes) in file paths. Furthermore, using `Path.with_suffix(".log")` on sanitized inputs containing dots (e.g. `.._.._.._etc_passwd`) can incorrectly truncate the stem by treating the text after the last dot as the file extension.
 **Learning:** Path generation from user inputs must strictly sanitize directory separators (`/` and `\`). Additionally, Python's `pathlib.Path.with_suffix()` behaves destructively on stems containing dots without prior extensions.
 **Prevention:** Explicitly sanitize inputs by replacing `/` and `\` with safe characters (like `_`). To safely append extensions to unpredictable strings, use f-strings or string concatenation before passing to `Path`.
+
+## 2026-11-30 - Arbitrary Permission Change via Symlink
+**Vulnerability:** `os.chmod` following symlinks on directory creation. When initializing `app_log_dir`, the script calls `os.chmod(self.app_log_dir, 0o700)` to ensure secure permissions. However, if an attacker pre-creates `app_log_dir` as a symlink to another file/directory, `os.chmod` follows the symlink and changes the permissions of the targeted file, leading to arbitrary permission modification.
+**Learning:** Python's `os.chmod` follows symlinks by default. When operating on paths in potentially shared or attacker-controllable locations (like XDG_STATE_HOME defaults), relying on `os.makedirs(..., exist_ok=True)` followed by `os.chmod()` without verifying the path type is unsafe.
+**Prevention:** Explicitly check for and unlink pre-existing symlinks or files at the target path before creating the directory and modifying its permissions.

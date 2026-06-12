@@ -144,6 +144,25 @@ class TestSecurity(unittest.TestCase):
         self.assertEqual(log_path.name, ".._.._.._etc_passwd.log")
         self.assertEqual(log_path.parent, Path(reporter.log_dir))
 
+    @patch("bastardkb_build_releases.SecureRotatingFileHandler")
+    def test_app_log_dir_prevents_symlink_attack(self, mock_handler):
+        mock_handler.return_value.level = 0
+        with tempfile.TemporaryDirectory() as td:
+            target_dir = os.path.join(td, "target")
+            os.makedirs(target_dir)
+            os.chmod(target_dir, 0o777)
+
+            app_log_dir = os.path.join(td, "bastardkb-qmk")
+            os.symlink(target_dir, app_log_dir)
+
+            with patch.dict(os.environ, {"XDG_STATE_HOME": td}):
+                reporter = bkb.Reporter(verbose=False)
+
+                st = os.stat(target_dir)
+                perms = stat.S_IMODE(st.st_mode)
+                self.assertEqual(perms, 0o777, "Target directory permissions were modified!")
+                self.assertFalse(os.path.islink(reporter.app_log_dir), "app_log_dir is still a symlink!")
+
 
 if __name__ == '__main__':
     unittest.main()
