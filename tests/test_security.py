@@ -144,6 +144,35 @@ class TestSecurity(unittest.TestCase):
         self.assertEqual(log_path.name, ".._.._.._etc_passwd.log")
         self.assertEqual(log_path.parent, Path(reporter.log_dir))
 
+    @patch("bastardkb_build_releases.SecureRotatingFileHandler")
+    def test_app_log_dir_prevents_arbitrary_chmod_via_symlink(self, mock_handler):
+        mock_handler.return_value.level = 0
+        with tempfile.TemporaryDirectory() as td:
+            # Create a target directory and set permissive permissions
+            target_dir = os.path.join(td, "target")
+            os.makedirs(target_dir)
+            os.chmod(target_dir, 0o777)
+
+            # Create a symlink to target_dir at the log_dir location
+            app_log_dir = os.path.join(td, "bastardkb-qmk")
+            os.symlink(target_dir, app_log_dir)
+
+            with patch.dict(os.environ, {"XDG_STATE_HOME": td}):
+                # Initialize reporter, which should detect and remove the symlink
+                reporter = bkb.Reporter(verbose=False)
+
+                # Verify target directory permissions are untouched
+                st_target = os.stat(target_dir)
+                perms_target = stat.S_IMODE(st_target.st_mode)
+                self.assertEqual(perms_target, 0o777, "Target directory permissions should not be modified")
+
+                # Verify app_log_dir is a real directory with 0o700 permissions
+                self.assertFalse(os.path.islink(app_log_dir), "Symlink should have been removed")
+                self.assertTrue(os.path.isdir(app_log_dir), "A real directory should have been created")
+                st_log = os.stat(app_log_dir)
+                perms_log = stat.S_IMODE(st_log.st_mode)
+                self.assertEqual(perms_log, 0o700, "Log directory should have 0o700 permissions")
+
 
 if __name__ == '__main__':
     unittest.main()
