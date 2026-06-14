@@ -171,5 +171,12 @@ class TestUX(unittest.TestCase):
             # verify exit was called
             mock_exit.assert_called_once_with(1)
 
+    @patch("bastardkb_build_releases.TimeRemainingColumn")
+    def test_progress_bar_includes_time_remaining(self, mock_tr_column):
+        reporter = MagicMock()
+        executor = MagicMock()
+        bkb.build(executor, reporter, [], lambda x: None)
+        self.assertTrue(mock_tr_column.called)
+
 if __name__ == '__main__':
     unittest.main()
