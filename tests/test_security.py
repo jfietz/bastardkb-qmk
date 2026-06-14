@@ -144,6 +144,33 @@ class TestSecurity(unittest.TestCase):
         self.assertEqual(log_path.name, ".._.._.._etc_passwd.log")
         self.assertEqual(log_path.parent, Path(reporter.log_dir))
 
+    @patch("bastardkb_build_releases.SecureRotatingFileHandler")
+    def test_app_log_dir_prevents_chmod_symlink_attack(self, mock_handler):
+        mock_handler.return_value.level = 0
+        with tempfile.TemporaryDirectory() as td:
+            # Create a sensitive file
+            sensitive_file = os.path.join(td, "sensitive.txt")
+            with open(sensitive_file, "w") as f:
+                f.write("secret")
+            os.chmod(sensitive_file, 0o600)
+
+            # Create a symlink in place of the log directory pointing to the sensitive file
+            app_log_dir = os.path.join(td, "bastardkb-qmk")
+            os.symlink(sensitive_file, app_log_dir)
+
+            with patch.dict(os.environ, {"XDG_STATE_HOME": td}):
+                # Initialize reporter
+                reporter = bkb.Reporter(verbose=False)
+
+                # Check sensitive file permissions were NOT modified to 0o700
+                st = os.stat(sensitive_file)
+                perms = stat.S_IMODE(st.st_mode)
+                self.assertEqual(perms, 0o600, "Sensitive file permissions were modified via symlink!")
+
+                # Check the log dir is not a symlink anymore and is a directory
+                self.assertFalse(os.path.islink(app_log_dir), "Symlink was not removed!")
+                self.assertTrue(os.path.isdir(app_log_dir), "Log directory was not created!")
+
 
 if __name__ == '__main__':
     unittest.main()
