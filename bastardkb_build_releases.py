@@ -190,6 +190,9 @@ class Reporter(object):
         # Logging setup.
         xdg_state_home = os.environ.get("XDG_STATE_HOME", os.path.join(os.path.expanduser("~"), ".local", "state"))
         self.app_log_dir = os.path.join(xdg_state_home, "bastardkb-qmk")
+        # Explicitly remove symlinks to prevent arbitrary permission modification via os.chmod
+        if os.path.islink(self.app_log_dir):
+            os.unlink(self.app_log_dir)
         os.makedirs(self.app_log_dir, mode=0o700, exist_ok=True)
         # Ensure correct permissions if directory already existed.
         os.chmod(self.app_log_dir, 0o700)
