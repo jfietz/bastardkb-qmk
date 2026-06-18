@@ -32,6 +32,7 @@ from rich.progress import (
     SpinnerColumn,
     TextColumn,
     TimeElapsedColumn,
+    TimeRemainingColumn,
 )
 from rich.text import Text
 from typing import NamedTuple, Optional
@@ -429,6 +430,7 @@ def build(
         BarColumn(complete_style="blue"),
         TextColumn("[magenta]{task.percentage:>5.1f}%"),
         TimeElapsedColumn(),
+        TimeRemainingColumn(),
         console=reporter.console,
     )
     progress_group = Group(empty_status, overall_status, overall_progress)
